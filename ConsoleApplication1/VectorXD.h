@@ -36,8 +36,6 @@ public:
 		return *this;
 	}
 	Polar2D ConvertToPolar2D()const;//转换成极坐标
-									//创建从init到term的向量
-	friend void BuildVector2D(const Vector2D& init, const Vector2D& term, Vector2D& result);
 	FloatType x, y;
 };
 
@@ -61,18 +59,25 @@ inline Vector2D operator *(const Vector2D &v, const FloatType k) {
 	return scale;
 }
 
-inline void BuildVector2D(const Vector2D& init, const Vector2D& term, Vector2D& result) {
-	result.x = term.x - init.x;
-	result.y = term.y - init.y;
-}
 inline FloatType CosTh(const Vector2D& a, const Vector2D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
 }
+//判断vector2D是否相等
+inline bool operator ==(const Vector2D& a, const Vector2D& b) {
+	if ((a.x==b.x) && (a.y == b.y)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 inline std::ostream & operator <<(std::ostream &out, const Vector2D &vec) {
 	out << "x = " << vec.x << " y = " << vec.y << std::endl;
 	return out;
 }
+
 //笛卡尔坐标转化成极坐标
 inline Polar2D Vector2D::ConvertToPolar2D()const {
 	Polar2D p;
@@ -143,13 +148,16 @@ inline Vector3D operator *(const FloatType k, const Vector3D &a) {
 inline Vector3D operator *(const Vector3D &a, const FloatType k) {
 	return (k*a);
 }
-inline Vector3D BuildVector3D(const Vector3D& init, const Vector3D& term) {
-	Vector3D result;
-	result.x = term.x - init.x;
-	result.y = term.y - init.y;
-	result.z = term.z - init.z;
-	return result;
+//判断vector3D是否相等
+inline bool operator ==(const Vector3D& a, const Vector3D& b) {
+	if ((a.x == b.x) && (a.y == b.y) && (a.z==b.z)) {
+		return true;
+	}
+	else {
+		return false;
+	}
 }
+
 inline FloatType CosTh(const Vector3D& a, const Vector3D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
@@ -239,14 +247,16 @@ inline Vector4D operator *(const FloatType k, const Vector4D &a) {
 inline Vector4D operator *(const Vector4D &a, const FloatType k) {
 	return (k*a);
 }
-inline Vector4D BuildVector4D(const Vector4D& init, const Vector4D& term) {
-	Vector4D result;
-	result.x = term.x - init.x;
-	result.y = term.y - init.y;
-	result.z = term.z - init.z;
-	result.w = 1;
-	return result;
+//判断vector4D是否相等
+inline bool operator ==(const Vector4D& a, const Vector4D& b) {
+	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) &&(a.w==b.w)) {
+		return true;
+	}
+	else {
+		return false;
+	}
 }
+
 inline FloatType CosTh(const Vector4D& a, const Vector4D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
@@ -393,6 +403,15 @@ inline Quat operator *(const FloatType k, const Quat &a) {
 }
 inline Quat operator *(const Quat &a, const FloatType k) {
 	return (k*a);
+}
+//判断Quat是否相等
+inline bool operator ==(const Quat& a, const Quat& b) {
+	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w)) {
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 inline std::ostream & operator <<(std::ostream &out, const Quat &vec) {
 	out << " w = " << vec.w << " x = " << vec.x << " y = " << vec.y << " z = " << vec.z << std::endl;
