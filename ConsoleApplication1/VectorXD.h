@@ -1,6 +1,5 @@
 #pragma once
 #include "Math.h"
-#include "CoordinateSystem.h"
 
 /******************2维点或向量***************/
 class Vector2D {
@@ -35,7 +34,6 @@ public:
 		}
 		return *this;
 	}
-	Polar2D ConvertToPolar2D()const;//转换成极坐标
 	FloatType x, y;
 };
 
@@ -58,14 +56,14 @@ inline Vector2D operator *(const Vector2D &v, const FloatType k) {
 	Vector2D scale(v.x*k, v.y *k);
 	return scale;
 }
-
+//a,b向量夹角余弦值
 inline FloatType CosTh(const Vector2D& a, const Vector2D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
 }
 //判断vector2D是否相等
 inline bool operator ==(const Vector2D& a, const Vector2D& b) {
-	if ((a.x==b.x) && (a.y == b.y)) {
+	if ((a.x - b.x < EPSILON_E5) && (a.y - b.y < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -76,14 +74,6 @@ inline bool operator ==(const Vector2D& a, const Vector2D& b) {
 inline std::ostream & operator <<(std::ostream &out, const Vector2D &vec) {
 	out << "x = " << vec.x << " y = " << vec.y << std::endl;
 	return out;
-}
-
-//笛卡尔坐标转化成极坐标
-inline Polar2D Vector2D::ConvertToPolar2D()const {
-	Polar2D p;
-	p.r = sqrtf(x*x + y * y);
-	p.theta = atanf(y / x);
-	return p;
 }
 
 /******************3维点或向量***************/
@@ -105,8 +95,6 @@ public:
 		}
 		return *this;
 	}
-	Cylindrical ConvertToCylindrical();
-	Spherical3D ConvertToSpherical3D();
 	~Vector3D() {}
 	Vector3D Cross(const Vector3D &b)const {//叉乘
 		Vector3D cross(y*b.z - b.y*z, b.x*z - x * b.z, x*b.y - b.x*y);
@@ -150,7 +138,7 @@ inline Vector3D operator *(const Vector3D &a, const FloatType k) {
 }
 //判断vector3D是否相等
 inline bool operator ==(const Vector3D& a, const Vector3D& b) {
-	if ((a.x == b.x) && (a.y == b.y) && (a.z==b.z)) {
+	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z)) {
 		return true;
 	}
 	else {
@@ -165,23 +153,6 @@ inline FloatType CosTh(const Vector3D& a, const Vector3D& b) {
 inline std::ostream & operator <<(std::ostream &out, const Vector3D &vec) {
 	out << "x = " << vec.x << " y = " << vec.y << " z = " << vec.z << std::endl;
 	return out;
-}
-//3维笛卡尔坐标转换为柱面坐标
-inline Cylindrical Vector3D::ConvertToCylindrical() {
-	Cylindrical c;
-	c.r = sqrtf(x*x + y * y);
-	c.theta = atanf(y / x);
-	c.z = z;
-	return c;
-}
-//3维笛卡尔坐标转换为球面坐标
-inline Spherical3D Vector3D::ConvertToSpherical3D() {
-	Spherical3D sp;
-	sp.p = sqrtf(x*x + y * y + z * z);
-	sp.theta = atanf(y / x);
-	FloatType r = sp.p* FastSin(sp.theta);
-	sp.phi = atanf(r / z);
-	return sp;
 }
 
 
@@ -249,7 +220,7 @@ inline Vector4D operator *(const Vector4D &a, const FloatType k) {
 }
 //判断vector4D是否相等
 inline bool operator ==(const Vector4D& a, const Vector4D& b) {
-	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) &&(a.w==b.w)) {
+	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w)) {
 		return true;
 	}
 	else {
@@ -274,7 +245,7 @@ public:
 	Quat(const Quat& v) :w(v.w), x(v.x), y(v.y), z(v.z) {}
 	Quat(const Vector3D& v, FloatType theta) {
 		//方向向量v必须是单位向量，角度单位为弧度
-		FloatType theta_div = 0.5 * theta;
+		FloatType theta_div = 0.5f * theta;
 		FloatType theta_sinf = sinf(theta_div);
 		w = cosf(theta_div);
 		x = theta_sinf * v.x;
@@ -283,7 +254,7 @@ public:
 	}
 	Quat(const Vector4D& v, FloatType theta) {
 		//方向向量v必须是单位向量，角度单位为弧度
-		FloatType theta_div = 0.5 * theta;
+		FloatType theta_div = 0.5f * theta;
 		FloatType theta_sinf = sinf(theta_div);
 		w = cosf(theta_div);
 		x = theta_sinf * v.x;
@@ -292,18 +263,18 @@ public:
 	}
 	Quat(FloatType theta_z, FloatType theta_y, FloatType theta_x) {
 		//根据绕x、y、z旋转的角度，创建对应的四元数
-		FloatType cos_z = 0.5 * cosf(theta_z);
-		FloatType cos_y = 0.5 * cosf(theta_y);
-		FloatType cos_x = 0.5 * cosf(theta_x);
+		FloatType cos_z = 0.5f * cosf(theta_z);
+		FloatType cos_y = 0.5f * cosf(theta_y);
+		FloatType cos_x = 0.5f * cosf(theta_x);
 
-		FloatType sin_z = 0.5* sinf(theta_z);
-		FloatType sin_x = 0.5* sinf(theta_x);
-		FloatType sin_y = 0.5* sinf(theta_y);
+		FloatType sin_z = 0.5f* sinf(theta_z);
+		FloatType sin_x = 0.5f* sinf(theta_x);
+		FloatType sin_y = 0.5f* sinf(theta_y);
 
-		w = cos_z*cos_y*cos_x + sin_z*sin_y*sin_x;
-		x = cos_z*cos_y*sin_x - sin_z*sin_y*cos_x;
-		y = cos_z*sin_y*cos_x + sin_z*cos_y*sin_x;
-		z = sin_z*cos_y*cos_x - cos_z*sin_y*sin_x;
+		w = cos_z * cos_y*cos_x + sin_z * sin_y*sin_x;
+		x = cos_z * cos_y*sin_x - sin_z * sin_y*cos_x;
+		y = cos_z * sin_y*cos_x + sin_z * cos_y*sin_x;
+		z = sin_z * cos_y*cos_x - cos_z * sin_y*sin_x;
 	}
 	~Quat() {}
 	Quat& operator =(const Quat &v) {
@@ -324,7 +295,7 @@ public:
 	void ConvToVector3DAndTheta(Vector3D &v, FloatType &theta) {
 		//将单位四元数转换成单位向量和角度
 		theta = acosf(w);
-		FloatType sinf_theta_inv = 1.0 / sinf(theta);
+		FloatType sinf_theta_inv = 1.0f / sinf(theta);
 		v.x = x * sinf_theta_inv;
 		v.y = y * sinf_theta_inv;
 		v.z = z * sinf_theta_inv;
@@ -360,7 +331,7 @@ public:
 		return Conjufate();
 	}
 	Quat Inverse() {
-		auto inv = 1.0 / Length2();
+		auto inv = 1.0f / Length2();
 
 		Quat q;
 		q.w = w * inv;
@@ -391,7 +362,7 @@ inline Quat operator *(const Quat &a, const Quat &b) {//a*b!=b*a 除非a,b为乘法单
 	FloatType ret6 = (a.w + a.y) *(b.w - b.z);
 	FloatType ret7 = (a.w - a.y) *(b.w + b.z);
 	FloatType ret8 = ret5 + ret6 + ret7;
-	FloatType ret9 = 0.5*(ret4 + ret8);
+	FloatType ret9 = 0.5f*(ret4 + ret8);
 
 	Quat mul(ret0 + ret9 - ret5, ret1 + ret9 - ret8, ret2 + ret9 - ret7, ret3 + ret9 - ret6);
 	return mul;
@@ -416,4 +387,128 @@ inline bool operator ==(const Quat& a, const Quat& b) {
 inline std::ostream & operator <<(std::ostream &out, const Quat &vec) {
 	out << " w = " << vec.w << " x = " << vec.x << " y = " << vec.y << " z = " << vec.z << std::endl;
 	return out;
+}
+
+
+using Point2D = Vector2D;
+using Point3D = Vector3D;
+/****************极坐标******************/
+class Polar2D {
+public:
+	Polar2D() :r(0.0f), theta(0.0f) {}
+	Polar2D(FloatType r, FloatType theta) :r(r), theta(theta) {}
+	Polar2D(const Polar2D& p) :r(p.r), theta(p.theta) {}
+	~Polar2D() {}
+	Polar2D& operator=(const Polar2D& p) {
+		if (this != &p) {
+			r = p.r;
+			theta = p.theta;
+		}
+		return *this;
+	}
+
+	FloatType r;
+	FloatType theta;//弧度
+};
+inline bool operator ==(const Polar2D& a, const Polar2D& b) {
+	if ((a.r - b.r < EPSILON_E5) && (a.theta - b.theta < EPSILON_E5)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+/***********柱面坐标*********/
+class Cylindrical {
+public:
+	Cylindrical() :r(0.0f), theta(0.0f), z(0.0f) {}
+	Cylindrical(FloatType r, FloatType theta, FloatType z) :r(r), theta(theta), z(z) {}
+	Cylindrical(Cylindrical& c) :r(c.r), theta(c.theta), z(c.z) {}
+	~Cylindrical() {}
+	Cylindrical& operator=(const Cylindrical& p) {
+		if (this != &p) {
+			r = p.r;
+			theta = p.theta;
+			z = p.z;
+		}
+		return *this;
+	}
+
+	FloatType r;
+	FloatType theta;
+	FloatType z;
+};
+/************球坐标*************/
+class Spherical3D {
+public:
+	Spherical3D() :p(0.0f), theta(0.0f), phi(0.0f) {}
+	Spherical3D(FloatType p, FloatType theta, FloatType phi) :p(p), theta(theta), phi(phi) {}
+	Spherical3D(Spherical3D& s) :p(s.p), theta(s.theta), phi(s.phi) {}
+	~Spherical3D() {}
+	Spherical3D& operator=(const Spherical3D& s) {
+		if (this != &s) {
+			p = s.p;
+			theta = s.theta;
+			phi = s.phi;
+		}
+		return *this;
+	}
+	FloatType p;
+	FloatType theta;
+	FloatType phi;
+};
+
+
+
+//笛卡尔坐标转化成极坐标
+inline Polar2D ConvertToPolar2D(const Point2D &v) {
+	Polar2D p;
+	p.r = sqrtf(v.x*v.x + v.y * v.y);
+	p.theta = atanf(v.y / v.x);
+	return p;
+}
+//极坐标转化成笛卡尔坐标
+inline Point2D ConvertToPoint2D(const Polar2D &q) {
+	Point2D v;
+	v.x = q.r * cosf(q.theta);
+	v.y = q.r * sinf(q.theta);
+	return v;
+}
+
+//3维笛卡尔坐标转换为柱面坐标
+inline Cylindrical ConvertToCylindrical(const Point3D &v) {
+	Cylindrical c;
+	c.r = sqrtf(v.x*v.x + v.y * v.y);
+	c.theta = atanf(v.y / v.x);
+	c.z = v.z;
+	return c;
+}
+//柱面坐标转换为3维笛卡尔坐标
+inline Point3D ConvertToPoint3D(const Cylindrical & c) {
+	Point3D p;
+	p.x = c.r * cosf(c.theta);
+	p.y = c.r * sinf(c.theta);
+	p.z = c.z;
+	return p;
+}
+
+
+//3维笛卡尔坐标转换为球面坐标
+inline Spherical3D ConvertToSpherical3D(const Point3D &v) {
+	Spherical3D sp;
+	sp.p = sqrtf(v.x*v.x + v.y * v.y + v.z * v.z);
+	sp.theta = atanf(v.y / v.x);
+	FloatType r = sp.p* FastSin(sp.theta);
+	sp.phi = atanf(r / v.z);
+	return sp;
+}
+
+//球面坐标转换为3维笛卡尔坐标
+inline Point3D ConvertToPoint3D(const Spherical3D& s) {
+	Point3D pt;
+	auto r = s.p * sinf(s.phi);
+	pt.x = r * cosf(s.theta);
+	pt.y = r * sinf(s.theta);
+	pt.z = s.p * cosf(s.phi);
 }

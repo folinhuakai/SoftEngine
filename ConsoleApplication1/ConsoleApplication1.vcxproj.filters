@@ -27,13 +27,13 @@
     <ClInclude Include="Matrix.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ParmLine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="VectorXD.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CoordinateSystem.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="ParmLine.h">
+    <ClInclude Include="Test.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,7 +44,7 @@
     <ClCompile Include="ConsoleApplication1.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Math.cpp">
+    <ClCompile Include="Test.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
