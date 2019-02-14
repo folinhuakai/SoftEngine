@@ -10,6 +10,7 @@ using namespace std;
 int main()
 {
 	TestVector2D();
+	TestVector3D();
 	return 0;
 }
 

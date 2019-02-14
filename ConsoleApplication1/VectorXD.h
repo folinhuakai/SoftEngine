@@ -63,7 +63,7 @@ inline FloatType CosTh(const Vector2D& a, const Vector2D& b) {
 }
 //判断vector2D是否相等
 inline bool operator ==(const Vector2D& a, const Vector2D& b) {
-	if ((a.x - b.x < EPSILON_E5) && (a.y - b.y < EPSILON_E5)) {
+	if ((fabs(a.x - b.x) < EPSILON_E5) && (fabs(a.y - b.y) < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -138,7 +138,7 @@ inline Vector3D operator *(const Vector3D &a, const FloatType k) {
 }
 //判断vector3D是否相等
 inline bool operator ==(const Vector3D& a, const Vector3D& b) {
-	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z)) {
+	if ((fabs(a.x - b.x) < EPSILON_E5) && (fabs(a.y - b.y) < EPSILON_E5) && (fabs(a.z - b.z) < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -411,7 +411,7 @@ public:
 	FloatType theta;//弧度
 };
 inline bool operator ==(const Polar2D& a, const Polar2D& b) {
-	if ((a.r - b.r < EPSILON_E5) && (a.theta - b.theta < EPSILON_E5)) {
+	if ((fabs(a.r - b.r) < EPSILON_E5) && (fabs(a.theta - b.theta) < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -424,7 +424,7 @@ class Cylindrical {
 public:
 	Cylindrical() :r(0.0f), theta(0.0f), z(0.0f) {}
 	Cylindrical(FloatType r, FloatType theta, FloatType z) :r(r), theta(theta), z(z) {}
-	Cylindrical(Cylindrical& c) :r(c.r), theta(c.theta), z(c.z) {}
+	Cylindrical(const Cylindrical& c) :r(c.r), theta(c.theta), z(c.z) {}
 	~Cylindrical() {}
 	Cylindrical& operator=(const Cylindrical& p) {
 		if (this != &p) {
@@ -439,12 +439,22 @@ public:
 	FloatType theta;
 	FloatType z;
 };
+
+inline bool operator ==(const Cylindrical& a, const Cylindrical& b) {
+	if ((fabs(a.r - b.r) < EPSILON_E5) && (fabs(a.theta - b.theta) < EPSILON_E5) && (fabs(a.z - b.z) < EPSILON_E5)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 /************球坐标*************/
 class Spherical3D {
 public:
 	Spherical3D() :p(0.0f), theta(0.0f), phi(0.0f) {}
 	Spherical3D(FloatType p, FloatType theta, FloatType phi) :p(p), theta(theta), phi(phi) {}
-	Spherical3D(Spherical3D& s) :p(s.p), theta(s.theta), phi(s.phi) {}
+	Spherical3D(const Spherical3D& s) :p(s.p), theta(s.theta), phi(s.phi) {}
 	~Spherical3D() {}
 	Spherical3D& operator=(const Spherical3D& s) {
 		if (this != &s) {
@@ -459,6 +469,14 @@ public:
 	FloatType phi;
 };
 
+inline bool operator ==(const Spherical3D& a, const Spherical3D& b) {
+	if ((fabs(a.p - b.p) < EPSILON_E5) && (fabs(a.theta - b.theta) < EPSILON_E5) && (fabs(a.phi - b.phi) < EPSILON_E5)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
 
 
 //笛卡尔坐标转化成极坐标
