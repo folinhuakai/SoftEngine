@@ -11,6 +11,8 @@ int main()
 {
 	TestVector2D();
 	TestVector3D();
+	TestVector4D();
+	TestQuat();
 	return 0;
 }
 

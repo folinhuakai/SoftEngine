@@ -159,7 +159,7 @@ inline std::ostream & operator <<(std::ostream &out, const Vector3D &vec) {
 /******************4维点或向量，用于齐次坐标***************/
 class Vector4D {
 public:
-	Vector4D() :x(0), y(0), z(0), w(0) {}
+	Vector4D() :x(0), y(0), z(0), w(1) {}
 	Vector4D(FloatType x, FloatType y, FloatType z, FloatType w) :x(x), y(y), z(z), w(w) {}
 	Vector4D(const Vector4D& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 	void Vector4DZero() {
@@ -220,7 +220,8 @@ inline Vector4D operator *(const Vector4D &a, const FloatType k) {
 }
 //判断vector4D是否相等
 inline bool operator ==(const Vector4D& a, const Vector4D& b) {
-	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w)) {
+	if ((fabs(a.x - b.x) < EPSILON_E5) && (fabs(a.y - b.y) < EPSILON_E5) 
+		&& (fabs(a.z - b.z) < EPSILON_E5) && (fabs(a.w - b.w) < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -263,13 +264,13 @@ public:
 	}
 	Quat(FloatType theta_z, FloatType theta_y, FloatType theta_x) {
 		//根据绕x、y、z旋转的角度，创建对应的四元数
-		FloatType cos_z = 0.5f * cosf(theta_z);
-		FloatType cos_y = 0.5f * cosf(theta_y);
-		FloatType cos_x = 0.5f * cosf(theta_x);
+		FloatType cos_z = cosf(0.5f *theta_z);
+		FloatType cos_y = cosf(0.5f * theta_y);
+		FloatType cos_x = cosf(0.5f * theta_x);
 
-		FloatType sin_z = 0.5f* sinf(theta_z);
-		FloatType sin_x = 0.5f* sinf(theta_x);
-		FloatType sin_y = 0.5f* sinf(theta_y);
+		FloatType sin_z = sinf(0.5f * theta_z);
+		FloatType sin_x = sinf(0.5f * theta_x);
+		FloatType sin_y = sinf(0.5f * theta_y);
 
 		w = cos_z * cos_y*cos_x + sin_z * sin_y*sin_x;
 		x = cos_z * cos_y*sin_x - sin_z * sin_y*cos_x;
@@ -303,6 +304,7 @@ public:
 		theta *= 2;
 	}
 	Quat Conjufate() {
+		//共轭
 		Quat q;
 		q.w = w;
 		q.x = -x;
@@ -328,9 +330,11 @@ public:
 		z *= inv;
 	}
 	Quat UnitInverse() {
+		//单位四元数的逆与共轭相同
 		return Conjufate();
 	}
 	Quat Inverse() {
+		//求逆
 		auto inv = 1.0f / Length2();
 
 		Quat q;
@@ -347,8 +351,8 @@ inline Quat operator +(const Quat &a, const Quat &b) {
 	Quat sum(a.w + b.w, a.x + b.x, a.y + b.y, a.z + b.z);
 	return sum;
 }
-inline Vector4D operator -(const Quat &a, const Quat &b) {
-	Vector4D sub(a.w - b.w, a.x - b.x, a.y - b.y, a.z - b.z);
+inline Quat operator -(const Quat &a, const Quat &b) {
+	Quat sub(a.w - b.w, a.x - b.x, a.y - b.y, a.z - b.z);
 	return sub;
 }
 
@@ -377,7 +381,8 @@ inline Quat operator *(const Quat &a, const FloatType k) {
 }
 //判断Quat是否相等
 inline bool operator ==(const Quat& a, const Quat& b) {
-	if ((a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w)) {
+	if ((fabs(a.x - b.x) < EPSILON_E5) && (fabs(a.y - b.y) < EPSILON_E5)
+		&& (fabs(a.z - b.z) < EPSILON_E5) && (fabs(a.w - b.w) < EPSILON_E5)) {
 		return true;
 	}
 	else {
@@ -517,7 +522,7 @@ inline Spherical3D ConvertToSpherical3D(const Point3D &v) {
 	Spherical3D sp;
 	sp.p = sqrtf(v.x*v.x + v.y * v.y + v.z * v.z);
 	sp.theta = atanf(v.y / v.x);
-	FloatType r = sp.p* FastSin(sp.theta);
+	FloatType r = sqrtf(v.x*v.x + v.y * v.y);
 	sp.phi = atanf(r / v.z);
 	return sp;
 }
