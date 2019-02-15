@@ -13,6 +13,7 @@ int main()
 	TestVector3D();
 	TestVector4D();
 	TestQuat();
+	TestCoordinate();
 	return 0;
 }
 

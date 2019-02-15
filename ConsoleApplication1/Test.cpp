@@ -176,3 +176,10 @@ void TestQuat() {
 	a.Normalize();
 	assert(a == nor);
 }
+
+void TestCoordinate() {
+	Polar2D a(2.0f, PI/6.0f);
+	Vector2D s = ConvertToPoint2D(a);
+	Vector2D d(1.73205078f, 1.0f);
+	assert(s == d); 
+}
