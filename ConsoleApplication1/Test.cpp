@@ -183,3 +183,43 @@ void TestCoordinate() {
 	Vector2D d(1.73205078f, 1.0f);
 	assert(s == d); 
 }
+
+void TestMatrix() {
+	Matrix<FloatType, 2, 3> a = { 1,4,2,2,0,0 };
+	Matrix<FloatType, 2, 3> b = { 0,0,5,7,5,0 };
+	//+
+	auto source = a + b;
+	Matrix<FloatType, 2, 3> d = { 1,4,7,9,5,0 };
+	assert(source == d);
+	//-
+	source = a - b;
+	d = {1,4,-3,-5,-5,0};
+	assert(source == d);
+	//*
+	source = 2*a*2;
+	d = {4,16,8,8,0,0};
+	assert(source == d);
+	//×ªÖÃ
+	auto s = a.Transpose();
+	Matrix<FloatType, 3, 2> d1 = {1,2,4,0,2,0};
+	assert(s == d1);
+	//¸³Öµ	
+	Matrix<FloatType, 2, 3> tmp = { 1,3,4,6,2,8 };
+	tmp = a;
+	assert(tmp == a);
+	//³Ë·¨
+	a = Matrix<FloatType, 2, 3>({1,0,2,-1,3,1});
+	Matrix<FloatType, 3, 2> c({3,1,2,1,1,0});
+	auto s2 = a * c;
+	Matrix<FloatType, 2, 2> d2 = { 5,1,4,2 };
+	assert(s2 == d2);
+	//2*2¾ØÕóÇóÄæ
+	Matrix<FloatType, 2, 2> ret({ 2,1,-1,0 });
+	InverseMatrix2X2(ret, s2);
+	d2 = Matrix<FloatType, 2, 2>({0,-1,1,2});
+	assert(s2 == d2);
+	//3*3¾ØÕóÇóÄæ
+	Matrix<FloatType, 3, 3> ret3({1,2,3,2,2,1,3,4,3});
+	Matrix<FloatType, 3, 3> s3;
+	Matrix<FloatType, 3, 3> d3({1,3,-2,-3/2,-3,5/2,1,1,-1});
+}

@@ -52,11 +52,23 @@ public:
 				M[i][j] = pm[i][j];
 		}
 	}
+	//¼Ó·¨
 	Matrix<T, ROW, COL> operator +(const Matrix<T, ROW, COL> &m)const {
 		T tmp[ROW][COL];
 		for (int i = 0; i < ROW; ++i) {
 			for (int j = 0; j < COL; j++) {
 				tmp[i][j] = M[i][j] + m[i][j];
+			}
+		}
+		Matrix<T, ROW, COL> res(tmp);
+		return res;
+	}
+	//¼õ·¨
+	Matrix<T, ROW, COL> operator -(const Matrix<T, ROW, COL> &m)const {
+		T tmp[ROW][COL];
+		for (int i = 0; i < ROW; ++i) {
+			for (int j = 0; j < COL; j++) {
+				tmp[i][j] = M[i][j] - m[i][j];
 			}
 		}
 		Matrix<T, ROW, COL> res(tmp);
@@ -453,4 +465,18 @@ inline void Swap(Matrix<T, 4, 4> &m, Vector4D &v, int col) {
 	m[1][col] = v.y;
 	m[2][col] = v.z;
 	m[2][col] = v.w;
+}
+
+template<class T, int ROW,int COL>
+bool operator ==(const Matrix<T, ROW, COL> &a,const Matrix<T, ROW, COL> &b) {
+	bool flag = true;
+	for (int i = 0; i < ROW; ++i) {
+		for (int j = 0; j < COL; ++j) {
+			if (fabs(a[i][j] - b[i][j]) > EPSILON_E5) {
+				flag = false;
+				break;
+			}
+		}
+	}
+	return flag;
 }

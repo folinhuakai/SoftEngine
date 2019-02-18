@@ -2,6 +2,7 @@
 #include "VectorXD.h"
 #include "Math.h"
 #include<assert.h>
+#include "Matrix.h"
 
 extern void TestVector2D();
 extern void TestVector3D();
