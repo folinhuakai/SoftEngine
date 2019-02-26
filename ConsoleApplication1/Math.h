@@ -12,7 +12,7 @@ const float EPSILON_E5 = 1E-5f;
 const float EPSILON_E6 = 1E-6f;
 //参数化直线交点
 const int PARM_LINE_NO_INTERSECT = 0;
-const int PARM_LINE_NO_INTERSECT_IN_SEGMENT = 1;
+const int PARM_LINE_INTERSECT_IN_SEGMENT = 1;
 const int PARM_LINE_INTERSECT_OUT_SEGMENT = 2;
 const int PARM_LINE_EVERYWHERE = 3;
 

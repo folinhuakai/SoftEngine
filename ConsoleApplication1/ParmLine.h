@@ -29,10 +29,10 @@ public:
 };
 
 //两条直线的交点，t1,t2为交点处对应的t值，返回交点
-inline FloatType IntersectionOfLine2D(ParmLine2D& l1, ParmLine2D& l2, FloatType& t1, FloatType& t2) {
+inline int IntersectionOfLine2D(ParmLine2D& l1, ParmLine2D& l2, FloatType& t1, FloatType& t2) {
 	//判断是否平行，两个方向向量是否存在线性关系,暂不考虑重叠情况
 	FloatType det = (l1.v.x * l2.v.y - l1.v.y * l2.v.x);
-	if (det <= EPSILON_E5) {
+	if (fabs(det) <= EPSILON_E5) {
 		return PARM_LINE_NO_INTERSECT;
 	}
 	t1 = (l2.v.x*(l1.p0.y - l2.p0.y) - l2.v.y *(l1.p0.x - l2.p0.x));
@@ -40,7 +40,7 @@ inline FloatType IntersectionOfLine2D(ParmLine2D& l1, ParmLine2D& l2, FloatType&
 	//判断交点是否在线段上
 
 	if (t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1) {
-		return PARM_LINE_NO_INTERSECT_IN_SEGMENT;
+		return PARM_LINE_INTERSECT_IN_SEGMENT;
 	}
 	else
 	{
@@ -72,6 +72,18 @@ public:
 
 /*************3D平面******************/
 class Plane3D {
+public:
+	Plane3D(const Point3D& p0, const Vector3D& n0, bool isNormolize = false) :p0(p0), n(n0) {
+		if (isNormolize) {
+			n.Normalize();
+		}
+	}
+	// 计算点与平面的位置关系：>0位于平面的正、<0负空间、==0位于平面上
+	FloatType ComputePointInPlane3D(const Point3D& pt) {
+		auto tmp = pt - p0;
+		FloatType result = n*tmp;
+		return result;
+	}
 	Point3D p0;
-	Vector2D n;
+	Vector3D n;
 };

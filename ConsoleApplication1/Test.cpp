@@ -223,3 +223,27 @@ void TestMatrix() {
 	Matrix<FloatType, 3, 3> s3;
 	Matrix<FloatType, 3, 3> d3({1,3,-2,-3/2,-3,5/2,1,1,-1});
 }
+
+void TestParmLine() {
+	Point2D p0(1,1);
+	Point2D p1(8,5);
+	ParmLine2D line1(p0, p1);
+	Point2D p2(3,6);
+	Point2D p3(8,3);
+	ParmLine2D line2(p2, p3);
+	FloatType t1 = 0;
+	FloatType t2 = 0;
+	int type = IntersectionOfLine2D(line1, line2, t1, t2);
+	assert(type == PARM_LINE_INTERSECT_IN_SEGMENT);
+	assert(t1 -0.756 < 0.01);
+	assert(t1 -0.658 < 0.01);
+	auto pt = line1.ComputeParmLine2D(0.5);
+	Point2D des(4.5, 3);
+	assert(pt == des);
+	Point3D q0(1, 1,1);
+	Point3D q1(8, 5,5);
+	ParmLine3D line3(q0, q1);
+	auto pt1 = line3.ComputeParmLine3D(0.5);
+	Point3D des1(4.5, 3,3);
+	assert(pt1 == des1);
+}

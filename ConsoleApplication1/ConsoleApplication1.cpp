@@ -14,6 +14,7 @@ int main()
 	TestVector4D();
 	TestQuat();
 	TestCoordinate();
+	TestParmLine();
 	return 0;
 }
 
