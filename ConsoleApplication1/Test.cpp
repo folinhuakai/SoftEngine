@@ -236,14 +236,36 @@ void TestParmLine() {
 	int type = IntersectionOfLine2D(line1, line2, t1, t2);
 	assert(type == PARM_LINE_INTERSECT_IN_SEGMENT);
 	assert(t1 -0.756 < 0.01);
-	assert(t1 -0.658 < 0.01);
+	assert(t2 -0.658 < 0.01);
+
 	auto pt = line1.ComputeParmLine2D(0.5);
 	Point2D des(4.5, 3);
 	assert(pt == des);
+
 	Point3D q0(1, 1,1);
 	Point3D q1(8, 5,5);
 	ParmLine3D line3(q0, q1);
 	auto pt1 = line3.ComputeParmLine3D(0.5);
 	Point3D des1(4.5, 3,3);
 	assert(pt1 == des1);
+
+	q0 = Point3D (0, 0, 0);
+	Vector3D n(1, 1, 1);
+	Plane3D pl(q0, n, true);
+	Point3D test(50, 50, 50);
+	FloatType type1 = pl.ComputePointInPlane3D(test);
+	assert(type1 > 0);
+
+	Point3D pt11(5, 5, -5);
+	Point3D pt2(5, 5, 5);
+	ParmLine3D line(pt11, pt2);
+	n = Vector3D(0, 0, 1);
+	q0 = Point3D(0, 0, 0);
+	pl = Plane3D (q0, n, true);
+	Point3D pt3(0.0,0.0,0.0);
+	Point3D des3(5.0,5.0,0.0);
+	type = IntersectionOfLineAndPlane3D(line, pl,t1, pt3);
+	assert(type == PARM_LINE_INTERSECT_IN_SEGMENT);
+	assert(fabs(t1 - 0.5) <=0);
+	assert(pt3 == des3);
 }
