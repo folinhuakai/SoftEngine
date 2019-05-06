@@ -208,20 +208,20 @@ inline Matrix<T, row, col> operator *(float k, const Matrix<T, row, col> &m1) {
 
 //计算行列式
 template<int N>
-inline FloatType MatrixDet(const Matrix<FloatType, N, N> &m) {
+inline float MatrixDet(const Matrix<float, N, N> &m) {
 
-	FloatType ret[N][N];
+	float ret[N][N];
 	m.GetRawDate(ret);
 	int maxLine = 0;
 	//标记交换行的次数
 	int sign = 0;
 	for (int col = 0; col < N - 1; ++col) {
 		maxLine = col;
-		FloatType Max = ret[col][col];
+		float Max = ret[col][col];
 
 		//判断每列的最大数，并将其放到主对角线上
 		for (int row = col + 1; row < N; ++row) {
-			FloatType value = ret[row][col];
+			float value = ret[row][col];
 			if (fabs(Max) < fabs(value)) {
 				//当某一行大于k时将其赋值给k，并将其所在行标记下来
 				Max = ret[row][col];
@@ -246,13 +246,13 @@ inline FloatType MatrixDet(const Matrix<FloatType, N, N> &m) {
 		for (int row = col + 1; row < N; row++) {
 			//
 			auto tmp = ret[row][col] / ret[col][col];
-			FloatType val;
+			float val;
 			for (int k = col; k < N; k++)
 				ret[row][k] = ret[row][k] - ret[col][k] * tmp;
 		}
 	}
 	//求化简后行列式的值
-	FloatType tmp = ret[0][0];
+	float tmp = ret[0][0];
 	for (int i = 1; i < N; ++i)
 		tmp *= ret[i][i];
 	if (sign % 2 != 0)
@@ -262,11 +262,11 @@ inline FloatType MatrixDet(const Matrix<FloatType, N, N> &m) {
 
 //矩阵求逆，采用LU分解方法
 template<int N>
-inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N, N>& result) {
-	FloatType ret[N][N];
+inline bool InverseMatrix(const Matrix<float, N, N> &m, Matrix<float, N, N>& result) {
+	float ret[N][N];
 	m.GetRawDate(ret);
-	FloatType u[N][N];
-	FloatType l[N][N];
+	float u[N][N];
+	float l[N][N];
 	// 计算L第1列，对角线都为1，不计算，用于存在U矩阵的对角线
 	for (int row = 1; row < N; ++row)
 		ret[row][0] = ret[row][0] / ret[0][0];
@@ -274,7 +274,7 @@ inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N,
 	for (int row = 1; row < N; ++row) {
 		//计算U矩阵
 		for (int col = row; col < N; ++col) {
-			FloatType sum = 0;
+			float sum = 0;
 			for (int t = 0; t < row; ++t) {
 				sum += ret[row][t] * ret[t][col];
 			}
@@ -284,7 +284,7 @@ inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N,
 		}
 		//计算L矩阵
 		for (int rowl = row + 1; rowl < N; ++rowl) {
-			FloatType sum = 0;
+			float sum = 0;
 			for (int t = 0; t < row; ++t) {
 				sum += ret[rowl][t] * ret[t][row];
 			}
@@ -307,7 +307,7 @@ inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N,
 		u[col][col] = 1 / ret[col][col];
 
 		for (int row = col - 1; row >= 0; --row) {
-			FloatType sum = 0;
+			float sum = 0;
 			for (int t = row + 1; t <= col; ++t) {
 				sum += ret[row][t] * u[t][col];
 			}
@@ -318,14 +318,14 @@ inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N,
 	for (int col = 0; col < N; ++col) {
 		l[col][col] = 1;
 		for (int row = col + 1; row < N; ++row) {
-			FloatType sum = 0;
+			float sum = 0;
 			for (int t = col; t < row; ++t) {
 				l[row][col] = l[row][col] - ret[row][t] * l[t][col];
 			}
 		}
 	}
-	Matrix<FloatType, N, N> U(u);
-	Matrix<FloatType, N, N> L(l);
+	Matrix<float, N, N> U(u);
+	Matrix<float, N, N> L(l);
 	std::cout << "U:" << std::endl;
 	std::cout << U;
 	std::cout << "L:" << std::endl;
@@ -339,7 +339,7 @@ inline bool InverseMatrix(const Matrix<FloatType, N, N> &m, Matrix<FloatType, N,
 }
 
 //2*2矩阵求逆
-inline bool InverseMatrix2X2(const Matrix<FloatType, 2, 2> &m, Matrix<FloatType, 2, 2>& result) {
+inline bool InverseMatrix2X2(const Matrix<float, 2, 2> &m, Matrix<float, 2, 2>& result) {
 	auto det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
 	if (det < EPSILON_E4) {
 		return false;
@@ -354,7 +354,7 @@ inline bool InverseMatrix2X2(const Matrix<FloatType, 2, 2> &m, Matrix<FloatType,
 }
 
 //3*3矩阵求逆，使用余子式、代数余子式、伴随矩阵求逆
-inline bool InverseMatrix3X3(const Matrix<FloatType, 3, 3> &m, Matrix<FloatType, 3, 3>& result) {
+inline bool InverseMatrix3X3(const Matrix<float, 3, 3> &m, Matrix<float, 3, 3>& result) {
 	auto det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2])
 		- m[0][1] * (m[1][0] * m[2][2] - m[2][0] * m[1][2])
 		+ m[0][2] * (m[1][0] * m[2][1] - m[2][0] * m[1][1]);
@@ -380,7 +380,7 @@ inline bool InverseMatrix3X3(const Matrix<FloatType, 3, 3> &m, Matrix<FloatType,
 }
 
 //4*4矩阵求逆，默认最后一列是【0，0，0，1】
-inline bool InverseMatrix4X4(const Matrix<FloatType, 4, 4> &m, Matrix<FloatType, 4, 4>& result) {
+inline bool InverseMatrix4X4(const Matrix<float, 4, 4> &m, Matrix<float, 4, 4>& result) {
 	auto det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2])
 		- m[0][1] * (m[1][0] * m[2][2] - m[2][0] * m[1][2])
 		+ m[0][2] * (m[1][0] * m[2][1] - m[2][0] * m[1][1]);
@@ -413,7 +413,7 @@ inline bool InverseMatrix4X4(const Matrix<FloatType, 4, 4> &m, Matrix<FloatType,
 }
 
 //3d向量与4*4矩阵相乘,对向量进行平移、旋转等操作
-inline Vector3D operator * (Vector3D &v, Matrix<FloatType, 4, 4> &m) {
+inline Vector3D operator * (Vector3D &v, Matrix<float, 4, 4> &m) {
 	Vector3D tmp;
 	tmp.x = v.x * m[0][0] + v.y * m[1][0] + v.z* m[2][0] + m[3][0];
 	tmp.y = v.x * m[0][1] + v.y * m[1][1] + v.z* m[2][1] + m[3][1];
@@ -421,19 +421,19 @@ inline Vector3D operator * (Vector3D &v, Matrix<FloatType, 4, 4> &m) {
 	return tmp;
 }
 //3d向量与4*4矩阵相乘
-inline Vector3D operator * (Matrix<FloatType, 4, 4> &m, Vector3D &v) {
+inline Vector3D operator * (Matrix<float, 4, 4> &m, Vector3D &v) {
 	return v * m;
 }
 
 //3d向量与4*3矩阵相乘，默认最后一列是【0，0，0，1】
-inline Vector3D operator * (Vector3D &v, Matrix<FloatType, 4, 3> &m) {
+inline Vector3D operator * (Vector3D &v, Matrix<float, 4, 3> &m) {
 	Vector3D tmp;
 	tmp.x = v.x * m[0][0] + v.y * m[1][0] + v.z* m[2][0] + m[3][0];
 	tmp.y = v.x * m[0][1] + v.y * m[1][1] + v.z* m[2][1] + m[3][1];
 	tmp.z = v.x * m[0][2] + v.y * m[1][2] + v.z* m[2][2] + m[3][2];
 	return tmp;
 }
-inline Vector3D operator * (Matrix<FloatType, 4, 3> &m, Vector3D &v) {
+inline Vector3D operator * (Matrix<float, 4, 3> &m, Vector3D &v) {
 	return (v * m);
 }
 
@@ -479,4 +479,28 @@ bool operator ==(const Matrix<T, ROW, COL> &a,const Matrix<T, ROW, COL> &b) {
 		}
 	}
 	return flag;
+}
+//方程求解函数
+inline int SolveSystem2_2(const Matrix<float,2,2> &a, Matrix<float, 2, 1> &x,const Matrix<float, 2, 1> &b) {
+	Matrix<float, 2, 2> ret;
+	if (InverseMatrix2X2(a, ret)) {
+		//存在逆矩阵
+		x = ret * b;
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
+inline int SolveSystem3_3(const Matrix<float,3,3> &a, Matrix<float, 3, 1> &x,const Matrix<float, 3, 1> &b) {
+	Matrix<float, 3, 3> ret;
+	if (InverseMatrix3X3(a, ret)) {
+		//存在逆矩阵
+		x = ret * b;
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }

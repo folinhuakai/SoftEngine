@@ -10,7 +10,7 @@ class ParmLine2D {
 public:
 	ParmLine2D(const Point2D& p0,const Point2D& p1) :p0(p0), p1(p1) ,v(p1-p0){}
 	//计算参数化直线在参数t处的值
-	Point2D ComputeParmLine2D(FloatType t) {
+	Point2D ComputeParmLine2D(float t) {
 		try {
 			if (t > 1 || i < 0) {
 				throw "i out of range!";
@@ -29,9 +29,9 @@ public:
 };
 
 //两条直线的交点，t1,t2为交点处对应的t值，返回交点
-inline int IntersectionOfLine2D(const ParmLine2D& l1, const ParmLine2D& l2, FloatType& t1, FloatType& t2) {
+inline int IntersectionOfLine2D(const ParmLine2D& l1, const ParmLine2D& l2, float& t1, float& t2) {
 	//判断是否平行，两个方向向量是否存在线性关系,暂不考虑重叠情况
-	FloatType det = (l1.v.x * l2.v.y - l1.v.y * l2.v.x);
+	float det = (l1.v.x * l2.v.y - l1.v.y * l2.v.x);
 	if (fabs(det) <= EPSILON_E5) {
 		return PARM_LINE_NO_INTERSECT;
 	}
@@ -53,7 +53,7 @@ inline int IntersectionOfLine2D(const ParmLine2D& l1, const ParmLine2D& l2, Floa
 class ParmLine3D {
 public:
 	ParmLine3D(const Point3D& p0,const Point3D& p1) :p0(p0), p1(p1), v(p1 - p0) {}
-	Point3D ComputeParmLine3D(FloatType t) {
+	Point3D ComputeParmLine3D(float t) {
 		try {
 			if (t > 1 || i < 0) {
 				throw "i out of range!";
@@ -79,9 +79,9 @@ public:
 		}
 	}
 	// 计算点与平面的位置关系：>0位于平面的正、<0负空间、==0位于平面上
-	FloatType ComputePointInPlane3D(const Point3D& pt) const{
+	float ComputePointInPlane3D(const Point3D& pt) const{
 		auto tmp = pt - p0;
-		FloatType result = n*tmp;
+		float result = n*tmp;
 		return result;
 	}
 	Point3D p0;
@@ -89,9 +89,9 @@ public:
 };
 
 //线段与平面的交点
-inline int IntersectionOfLineAndPlane3D(const ParmLine3D& line, const Plane3D& plane, FloatType& t, Point3D& pt) {
+inline int IntersectionOfLineAndPlane3D(const ParmLine3D& line, const Plane3D& plane, float& t, Point3D& pt) {
 	//判断是否平行，两个方向向量是否存在线性关系,暂不考虑重叠情况
-	FloatType dot = (plane.n * line.v);
+	float dot = (plane.n * line.v);
 	if (fabs(dot) <= EPSILON_E5) {
 		if(fabs(plane.ComputePointInPlane3D(line.p0)) <= EPSILON_E5)
 			return PARM_LINE_EVERYWHERE;

@@ -1,7 +1,5 @@
 #pragma once
 #include<iostream>
-
-using FloatType = float;
 const float PI = 3.141592654f;
 const float PI_2 = 6.283185307f;
 const float PI_DIV_2 = 1.570796327f;
@@ -34,10 +32,10 @@ inline void Swap(T& a, T& b) {
 	b = tmp;
 }
 //转换角度和弧度
-inline FloatType DegToRad(FloatType ang) {
+inline float DegToRad(float ang) {
 	return ang * PI / 180.0f;
 }
-inline FloatType RadToDeg(FloatType rads) {
+inline float RadToDeg(float rads) {
 	return rads * 180.0f / PI;
 }
 
@@ -50,46 +48,46 @@ inline void usingI() {
 	i()++;
 }
 
-inline FloatType (&SinLook())[361]{
-	static FloatType sinLook_[361];
+inline float (&SinLook())[361]{
+	static float sinLook_[361];
 	return sinLook_;
 }
-inline FloatType(&CosLook())[361]{
-	static FloatType cosLook_[361];
+inline float(&CosLook())[361]{
+	static float cosLook_[361];
 return cosLook_;
 }
 //三角函数函数，查表法
 
 //三角函数相关
 inline void InitSinTable() {
-	FloatType w = 0.0f;
+	float w = 0.0f;
 	for (int i = 0; i < 361; ++i, ++w)
 		SinLook()[i] = sin(DegToRad(w));
 }
 inline void InitCosTable() {
-	FloatType w = 0.0f;
+	float w = 0.0f;
 	for (int i = 0; i < 361; ++i, ++w)
 		CosLook()[i] = cos(DegToRad(w));
 }
-inline FloatType FastSin(FloatType theta) {
+inline float FastSin(float theta) {
 	//查表，线性插值
 	theta = fmodf(theta, 360);
 	if (theta < 0) {
 		theta = +360.0f;
 	}
 	int thetaInt = (int)theta;
-	FloatType thetaF = theta - thetaInt;
+	float thetaF = theta - thetaInt;
 	return SinLook()[thetaInt]
 		+ thetaF * (SinLook()[thetaInt + 1] - SinLook()[thetaInt]);
 }
-inline FloatType FastCos(FloatType theta) {
+inline float FastCos(float theta) {
 	//查表，线性插值
 	theta = fmodf(theta, 360);
 	if (theta < 0) {
 		theta = +360.0f;
 	}
 	int thetaInt = (int)theta;
-	FloatType thetaF = theta - thetaInt;
+	float thetaF = theta - thetaInt;
 	return CosLook()[thetaInt]
 		+ thetaF * (CosLook()[thetaInt + 1] - CosLook()[thetaInt]);
 }

@@ -1,16 +1,21 @@
 #pragma once
 #include "Math.h"
-
+class Vector2D;
+class Vector3D;
+class Vector4D;
+using Point2D = Vector2D;
+using Point3D = Vector3D;
+using Point4D = Vector4D;
 /******************2维点或向量***************/
 class Vector2D {
 public:
 	//构造函数
 	Vector2D() :x(0.0f), y(0.0f) {}
-	Vector2D(FloatType x, FloatType y) : x(x), y(y) {}
+	Vector2D(float x, float y) : x(x), y(y) {}
 	Vector2D(const Vector2D& v) : x(v.x), y(v.y) {}
 	~Vector2D() {};
 
-	FloatType Length()const {//向量长度
+	float Length()const {//向量长度
 		return sqrtf(x*x + y * y);
 	}
 	bool Normalize() {//归一化
@@ -34,7 +39,7 @@ public:
 		}
 		return *this;
 	}
-	FloatType x, y;
+	float x, y;
 };
 
 inline const Vector2D operator +(const Vector2D &a, const Vector2D &b) {
@@ -45,19 +50,19 @@ inline const Vector2D operator -(const Vector2D &a, const Vector2D &b) {
 	Vector2D sub(a.x - b.x, a.y - b.y);
 	return sub;
 }
-inline FloatType operator *(const Vector2D &a, const Vector2D &b) {
+inline float operator *(const Vector2D &a, const Vector2D &b) {
 	return(b.x*a.x + b.y*a.y);
 }
-inline Vector2D operator *(const FloatType k, const Vector2D &v) {
+inline Vector2D operator *(const float k, const Vector2D &v) {
 	Vector2D scale(v.x*k, v.y *k);
 	return scale;
 }
-inline Vector2D operator *(const Vector2D &v, const FloatType k) {
+inline Vector2D operator *(const Vector2D &v, const float k) {
 	Vector2D scale(v.x*k, v.y *k);
 	return scale;
 }
 //a,b向量夹角余弦值
-inline FloatType CosTh(const Vector2D& a, const Vector2D& b) {
+inline float CosTh(const Vector2D& a, const Vector2D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
 }
@@ -80,7 +85,7 @@ inline std::ostream & operator <<(std::ostream &out, const Vector2D &vec) {
 class Vector3D {
 public:
 	Vector3D() :x(0), y(0), z(0) {}
-	Vector3D(FloatType x, FloatType y, FloatType z) :x(x), y(y), z(z) {}
+	Vector3D(float x, float y, float z) :x(x), y(y), z(z) {}
 	Vector3D(const Vector3D& v) : x(v.x), y(v.y), z(v.z) {}
 	void Vector3DZero() {
 		x = 0.0f;
@@ -100,7 +105,7 @@ public:
 		Vector3D cross(y*b.z - b.y*z, b.x*z - x * b.z, x*b.y - b.x*y);
 		return cross;
 	}
-	FloatType Length()const {//向量长度
+	float Length()const {//向量长度
 		return sqrtf(x*x + y * y + z * z);
 	}
 	void Normalize() {//归一化
@@ -113,7 +118,7 @@ public:
 		y *= inv;
 		z *= inv;
 	}
-	FloatType x, y, z;
+	float x, y, z;
 };
 
 
@@ -126,14 +131,14 @@ inline Vector3D operator -(const Vector3D &a, const Vector3D &b) {
 	return sub;
 }
 
-inline FloatType operator *(const Vector3D &a, const Vector3D &b) {
+inline float operator *(const Vector3D &a, const Vector3D &b) {
 	return(b.x*a.x + b.y*a.y + b.z*a.z);
 }
-inline Vector3D operator *(const FloatType k, const Vector3D &a) {
+inline Vector3D operator *(const float k, const Vector3D &a) {
 	Vector3D scale(a.x*k, a.y *k, a.z*k);
 	return scale;
 }
-inline Vector3D operator *(const Vector3D &a, const FloatType k) {
+inline Vector3D operator *(const Vector3D &a, const float k) {
 	return (k*a);
 }
 //判断vector3D是否相等
@@ -146,7 +151,7 @@ inline bool operator ==(const Vector3D& a, const Vector3D& b) {
 	}
 }
 
-inline FloatType CosTh(const Vector3D& a, const Vector3D& b) {
+inline float CosTh(const Vector3D& a, const Vector3D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
 }
@@ -160,7 +165,7 @@ inline std::ostream & operator <<(std::ostream &out, const Vector3D &vec) {
 class Vector4D {
 public:
 	Vector4D() :x(0), y(0), z(0), w(1) {}
-	Vector4D(FloatType x, FloatType y, FloatType z, FloatType w) :x(x), y(y), z(z), w(w) {}
+	Vector4D(float x, float y, float z, float w) :x(x), y(y), z(z), w(w) {}
 	Vector4D(const Vector4D& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 	void Vector4DZero() {
 		x = 0.0f;
@@ -182,7 +187,7 @@ public:
 		Vector4D cross(y*b.z - b.y*z, b.x*z - x * b.z, x*b.y - b.x*y, 1);
 		return cross;
 	}
-	FloatType Length()const {//向量长度
+	float Length()const {//向量长度
 		return sqrtf(x*x + y * y + z * z);
 	}
 	void Normalize() {//归一化
@@ -196,7 +201,7 @@ public:
 		z *= inv;
 		w = 1;
 	}
-	FloatType x, y, z, w;
+	float x, y, z, w;
 };
 
 inline Vector4D operator +(const Vector4D &a, const Vector4D &b) {
@@ -208,14 +213,14 @@ inline Vector4D operator -(const Vector4D &a, const Vector4D &b) {
 	return sub;
 }
 
-inline FloatType operator *(const Vector4D &a, const Vector4D &b) {
+inline float operator *(const Vector4D &a, const Vector4D &b) {
 	return(b.x*a.x + b.y*a.y + b.z*a.z);
 }
-inline Vector4D operator *(const FloatType k, const Vector4D &a) {
+inline Vector4D operator *(const float k, const Vector4D &a) {
 	Vector4D scale(a.x*k, a.y *k, a.z*k, 1);
 	return scale;
 }
-inline Vector4D operator *(const Vector4D &a, const FloatType k) {
+inline Vector4D operator *(const Vector4D &a, const float k) {
 	return (k*a);
 }
 //判断vector4D是否相等
@@ -229,7 +234,7 @@ inline bool operator ==(const Vector4D& a, const Vector4D& b) {
 	}
 }
 
-inline FloatType CosTh(const Vector4D& a, const Vector4D& b) {
+inline float CosTh(const Vector4D& a, const Vector4D& b) {
 	auto tmp = a * b / (a.Length() *b.Length());
 	return tmp;
 }
@@ -242,35 +247,35 @@ inline std::ostream & operator <<(std::ostream &out, const Vector4D &vec) {
 class Quat {
 public:
 	Quat() :w(0), x(0), y(0), z(0) {}
-	Quat(FloatType w, FloatType x, FloatType y, FloatType z) :w(w), x(x), y(y), z(z) {}
+	Quat(float w, float x, float y, float z) :w(w), x(x), y(y), z(z) {}
 	Quat(const Quat& v) :w(v.w), x(v.x), y(v.y), z(v.z) {}
-	Quat(const Vector3D& v, FloatType theta) {
+	Quat(const Vector3D& v, float theta) {
 		//方向向量v必须是单位向量，角度单位为弧度
-		FloatType theta_div = 0.5f * theta;
-		FloatType theta_sinf = sinf(theta_div);
+		float theta_div = 0.5f * theta;
+		float theta_sinf = sinf(theta_div);
 		w = cosf(theta_div);
 		x = theta_sinf * v.x;
 		y = theta_sinf * v.y;
 		z = theta_sinf * v.z;
 	}
-	Quat(const Vector4D& v, FloatType theta) {
+	Quat(const Vector4D& v, float theta) {
 		//方向向量v必须是单位向量，角度单位为弧度
-		FloatType theta_div = 0.5f * theta;
-		FloatType theta_sinf = sinf(theta_div);
+		float theta_div = 0.5f * theta;
+		float theta_sinf = sinf(theta_div);
 		w = cosf(theta_div);
 		x = theta_sinf * v.x;
 		y = theta_sinf * v.y;
 		z = theta_sinf * v.z;
 	}
-	Quat(FloatType theta_z, FloatType theta_y, FloatType theta_x) {
+	Quat(float theta_z, float theta_y, float theta_x) {
 		//根据绕x、y、z旋转的角度，创建对应的四元数
-		FloatType cos_z = cosf(0.5f *theta_z);
-		FloatType cos_y = cosf(0.5f * theta_y);
-		FloatType cos_x = cosf(0.5f * theta_x);
+		float cos_z = cosf(0.5f *theta_z);
+		float cos_y = cosf(0.5f * theta_y);
+		float cos_x = cosf(0.5f * theta_x);
 
-		FloatType sin_z = sinf(0.5f * theta_z);
-		FloatType sin_x = sinf(0.5f * theta_x);
-		FloatType sin_y = sinf(0.5f * theta_y);
+		float sin_z = sinf(0.5f * theta_z);
+		float sin_x = sinf(0.5f * theta_x);
+		float sin_y = sinf(0.5f * theta_y);
 
 		w = cos_z * cos_y*cos_x + sin_z * sin_y*sin_x;
 		x = cos_z * cos_y*sin_x - sin_z * sin_y*cos_x;
@@ -293,10 +298,10 @@ public:
 		y = 0.0f;
 		z = 0.0f;
 	}
-	void ConvToVector3DAndTheta(Vector3D &v, FloatType &theta) {
+	void ConvToVector3DAndTheta(Vector3D &v, float &theta) {
 		//将单位四元数转换成单位向量和角度
 		theta = acosf(w);
-		FloatType sinf_theta_inv = 1.0f / sinf(theta);
+		float sinf_theta_inv = 1.0f / sinf(theta);
 		v.x = x * sinf_theta_inv;
 		v.y = y * sinf_theta_inv;
 		v.z = z * sinf_theta_inv;
@@ -312,10 +317,10 @@ public:
 		q.z = -z;
 		return q;
 	}
-	FloatType Length() {
+	float Length() {
 		return sqrt(w*w + x * x + y * y + z * z);
 	}
-	FloatType Length2() {
+	float Length2() {
 		return (w*w + x * x + y * y + z * z);
 	}
 	void Normalize() {//归一化
@@ -344,7 +349,7 @@ public:
 		q.z = -z * inv;
 		return q;
 	}
-	FloatType w, x, y, z;
+	float w, x, y, z;
 };
 
 inline Quat operator +(const Quat &a, const Quat &b) {
@@ -357,26 +362,26 @@ inline Quat operator -(const Quat &a, const Quat &b) {
 }
 
 inline Quat operator *(const Quat &a, const Quat &b) {//a*b!=b*a 除非a,b为乘法单位数
-	FloatType ret0 = (a.z - a.y) *(b.y - b.z);
-	FloatType ret1 = (a.w + a.x) *(b.w + b.x);
-	FloatType ret2 = (a.w - a.x) *(b.y + b.z);
-	FloatType ret3 = (a.y + a.z) *(b.w - b.x);
-	FloatType ret4 = (a.z - a.x) *(b.x - b.y);
-	FloatType ret5 = (a.z + a.x) *(b.x + b.y);
-	FloatType ret6 = (a.w + a.y) *(b.w - b.z);
-	FloatType ret7 = (a.w - a.y) *(b.w + b.z);
-	FloatType ret8 = ret5 + ret6 + ret7;
-	FloatType ret9 = 0.5f*(ret4 + ret8);
+	float ret0 = (a.z - a.y) *(b.y - b.z);
+	float ret1 = (a.w + a.x) *(b.w + b.x);
+	float ret2 = (a.w - a.x) *(b.y + b.z);
+	float ret3 = (a.y + a.z) *(b.w - b.x);
+	float ret4 = (a.z - a.x) *(b.x - b.y);
+	float ret5 = (a.z + a.x) *(b.x + b.y);
+	float ret6 = (a.w + a.y) *(b.w - b.z);
+	float ret7 = (a.w - a.y) *(b.w + b.z);
+	float ret8 = ret5 + ret6 + ret7;
+	float ret9 = 0.5f*(ret4 + ret8);
 
 	Quat mul(ret0 + ret9 - ret5, ret1 + ret9 - ret8, ret2 + ret9 - ret7, ret3 + ret9 - ret6);
 	return mul;
 
 }
-inline Quat operator *(const FloatType k, const Quat &a) {
+inline Quat operator *(const float k, const Quat &a) {
 	Quat scale(a.w*k, a.x*k, a.y *k, a.z*k);
 	return scale;
 }
-inline Quat operator *(const Quat &a, const FloatType k) {
+inline Quat operator *(const Quat &a, const float k) {
 	return (k*a);
 }
 //判断Quat是否相等
@@ -394,14 +399,11 @@ inline std::ostream & operator <<(std::ostream &out, const Quat &vec) {
 	return out;
 }
 
-
-using Point2D = Vector2D;
-using Point3D = Vector3D;
 /****************极坐标******************/
 class Polar2D {
 public:
 	Polar2D() :r(0.0f), theta(0.0f) {}
-	Polar2D(FloatType r, FloatType theta) :r(r), theta(theta) {}
+	Polar2D(float r, float theta) :r(r), theta(theta) {}
 	Polar2D(const Polar2D& p) :r(p.r), theta(p.theta) {}
 	~Polar2D() {}
 	Polar2D& operator=(const Polar2D& p) {
@@ -412,8 +414,8 @@ public:
 		return *this;
 	}
 
-	FloatType r;
-	FloatType theta;//弧度
+	float r;
+	float theta;//弧度
 };
 inline bool operator ==(const Polar2D& a, const Polar2D& b) {
 	if ((fabs(a.r - b.r) < EPSILON_E5) && (fabs(a.theta - b.theta) < EPSILON_E5)) {
@@ -428,7 +430,7 @@ inline bool operator ==(const Polar2D& a, const Polar2D& b) {
 class Cylindrical {
 public:
 	Cylindrical() :r(0.0f), theta(0.0f), z(0.0f) {}
-	Cylindrical(FloatType r, FloatType theta, FloatType z) :r(r), theta(theta), z(z) {}
+	Cylindrical(float r, float theta, float z) :r(r), theta(theta), z(z) {}
 	Cylindrical(const Cylindrical& c) :r(c.r), theta(c.theta), z(c.z) {}
 	~Cylindrical() {}
 	Cylindrical& operator=(const Cylindrical& p) {
@@ -440,9 +442,9 @@ public:
 		return *this;
 	}
 
-	FloatType r;
-	FloatType theta;
-	FloatType z;
+	float r;
+	float theta;
+	float z;
 };
 
 inline bool operator ==(const Cylindrical& a, const Cylindrical& b) {
@@ -458,7 +460,7 @@ inline bool operator ==(const Cylindrical& a, const Cylindrical& b) {
 class Spherical3D {
 public:
 	Spherical3D() :p(0.0f), theta(0.0f), phi(0.0f) {}
-	Spherical3D(FloatType p, FloatType theta, FloatType phi) :p(p), theta(theta), phi(phi) {}
+	Spherical3D(float p, float theta, float phi) :p(p), theta(theta), phi(phi) {}
 	Spherical3D(const Spherical3D& s) :p(s.p), theta(s.theta), phi(s.phi) {}
 	~Spherical3D() {}
 	Spherical3D& operator=(const Spherical3D& s) {
@@ -469,9 +471,9 @@ public:
 		}
 		return *this;
 	}
-	FloatType p;
-	FloatType theta;
-	FloatType phi;
+	float p;
+	float theta;
+	float phi;
 };
 
 inline bool operator ==(const Spherical3D& a, const Spherical3D& b) {
@@ -522,7 +524,7 @@ inline Spherical3D ConvertToSpherical3D(const Point3D &v) {
 	Spherical3D sp;
 	sp.p = sqrtf(v.x*v.x + v.y * v.y + v.z * v.z);
 	sp.theta = atanf(v.y / v.x);
-	FloatType r = sqrtf(v.x*v.x + v.y * v.y);
+	float r = sqrtf(v.x*v.x + v.y * v.y);
 	sp.phi = atanf(r / v.z);
 	return sp;
 }
