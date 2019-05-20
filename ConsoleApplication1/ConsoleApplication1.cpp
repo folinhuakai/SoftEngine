@@ -2,19 +2,27 @@
 //
 
 #include "stdafx.h"
-
 #include<iostream>
 #include <fstream>
 #include "Test.h"
 #include "Object.h"
+#include<vector>
+#include <windows.h>
 using namespace std;
 
+std::string workingdir()
+{
+	char buf[256];
+	GetCurrentDirectoryA(256, buf);
+	return std::string(buf) + '\\';
+}
 
 int Load_OBJECT4DV1_PLG(Object& obj, //物体
 	const char * filename,     //文件名
 	Vector4D &scale,	 //初始缩放
 	Vector4D &pos,       //世界坐标位置
 	Vector4D &rot);       // 初始旋转
+std::vector<std::string> Split(const std::string &s, const std::string &seperator);
 int main()
 {
 	TestVector2D();
@@ -28,11 +36,23 @@ int main()
 	Vector4D scale = { 1,1,1,1 };
 	Vector4D pos = { 0,0,0,1 };
 	Vector4D rot = { 0,0,0,1 };
-	Load_OBJECT4DV1_PLG(obj,
+	/*Load_OBJECT4DV1_PLG(obj,
 		name,     //文件名
 		scale,	 //初始缩放
 		pos,       //世界坐标位置
 		rot);      // 初始旋转
-	return 0;
+	return 0;*/
+	string line;
+	ifstream myfile("Resources\\markerg1.plg");
+	
+	if (myfile.is_open())
+	{
+		while (getline(myfile, line))
+		{
+			cout << line << '\n';
+		}
+		myfile.close();
+	}
+
 }
 

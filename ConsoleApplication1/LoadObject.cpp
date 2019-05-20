@@ -17,25 +17,21 @@ constexpr auto PLX_2SIDED_FLAG = 0x1000;//双面
 constexpr auto PLX_1SIDED_FLAG = 0x0000;//单面
 constexpr auto PLX_COLOR_MODE_RGB_FLAG = 0x8000;//rgb模式
 /********************读取plg文件的一行，跳过注释和空行****************************/
-char *Get_Line_PLG(char *buffer, int maxlength, std::ifstream &fp)
+bool GetLine(std::ifstream &fp, std::string &out)
 {
-	int index = 0;  // general index
-	int length = 0; // general length
-
-	while (fp.good() && !fp.eof())
+	while (!fp.eof())
 	{
-		memset(buffer, 0, maxlength);
-		fp.getline(buffer, maxlength);
-		for (length = strlen(buffer), index = 0; isspace(buffer[index]); index++);
-
+		std::getline(fp, out);
+		
 		// test if this was a blank line or a comment
-		if (index >= length || buffer[index] == '#')
+		if (out == "" || out[0] == '#')
 			continue;
 
 		// at this point we have a good line
-		return(&buffer[index]);
+		return true;
 	}
-} // end Get_Line_PLG
+	return false;
+} // end GetLine
 
 /****************************计算物体平均半径和最大半径***********************************************/
 float ComputeObjectRadius(Object &obj)
@@ -72,6 +68,43 @@ float ComputeObjectRadius(Object &obj)
 	return(obj.maxRadius);
 
 } 
+std::vector<std::string> Split(const std::string &s, const std::string &seperator) {
+	std::vector<std::string> result;
+	typedef std::string::size_type string_size;
+	string_size i = 0;
+
+	while (i != s.size()) {
+		//找到字符串中首个不等于分隔符的字母；
+		int flag = 0;
+		while (i != s.size() && flag == 0) {
+			flag = 1;
+			for (string_size x = 0; x < seperator.size(); ++x)
+				if (s[i] == seperator[x]) {
+					++i;
+					flag = 0;
+					break;
+				}
+		}
+
+		//找到又一个分隔符，将两个分隔符之间的字符串取出；
+		flag = 0;
+		string_size j = i;
+		while (j != s.size() && flag == 0) {
+			for (string_size x = 0; x < seperator.size(); ++x)
+				if (s[j] == seperator[x]) {
+					flag = 1;
+					break;
+				}
+			if (flag == 0)
+				++j;
+		}
+		if (i != j) {
+			result.push_back(s.substr(i, j - i));
+			i = j;
+		}
+	}
+	return result;
+}
 
 int Load_OBJECT4DV1_PLG(Object& obj, //物体
 	const char * filename,     //文件名
@@ -81,7 +114,7 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 {
 	// 从磁盘文件内读取plg数据, 允许调用程序对物体进行缩放旋转等操作
 	std::ifstream fp;
-	char buffer[256];  // working buffer
+	std::string line;  // working buffer
 
 	char *token_string;  //指向要分析的物体数据文本指针
 
@@ -111,50 +144,69 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 	// Step 1: clear out the object and initialize it a bit
 	memset(&obj, 0, sizeof(Object));
 	// 设置物体状态为活动、可见
-	obj.state = OBJECT_STATE_ACTIVE | OBJECT_STATE_ACTIVE;
+	obj.state = OBJECT_STATE_ACTIVE | OBJECT_STATE_VISIBLE;
 
 	// 设置物体世界坐标
 	obj.worldPos = pos;
 
 	// Step 2: open the file for reading
-	fp.open(filename);
+	/*fp.open(filename);
 	if (fp.is_open())
 	{
 		std::cout<<"Couldn't open PLG file "<< filename;
 		return(0);
-	} // end if
-
+	} // end if*/
+	std::ifstream istrm(filename);
+	if (!istrm.is_open()) {
+		std::cout << "failed to open " << filename << '\n';
+	}
+	else {
+		std::string s;
+		if (istrm >> s)                               // text input
+			std::cout << "read back from file: " << ' '<< ' ' << s << '\n';
+	}
 	// Step 3: 读取物体描述符
-	if (!(token_string = Get_Line_PLG(buffer, 255, fp)))
+	if (!(GetLine(fp, line)))
 	{
 		std::cout<<"PLG file error with file "<< filename<<"(object descriptor invalid).";
 		return(0);
 	} // end if
+	std::cout<<"Object Descriptor:"<< line;
 
-	std::cout<<"Object Descriptor:"<< token_string;
-
-	std::vector<char> buff(256);
 	// 设置物体描述符
-	sscanf(token_string, "%s %d %d", buff.data(), &obj.numVertices, &obj.numPolygons);
-	buff[buff.size() - 1] = '\0';
-	obj.name = std::string(buff.data());
+	auto result = Split(line, " ");
+	if (result.size() >= 3) {
+		obj.name = result[0];
+		obj.numVertices = std::stoi(result[1]);
+		obj.numPolygons = std::stoi(result[2]);
+	}
+	else {
+		std::cout << "object name error";
+		return(0);
+	}
 
 
 	// Step 4: 顶点列表
 	for (int vertex = 0; vertex < obj.numVertices; vertex++)
 	{
 		// get the next vertex
-		if (!(token_string = Get_Line_PLG(buffer, 255, fp)))
+		if (!(GetLine(fp, line)))
 		{
 			std::cout<<"PLG file error with file vertex list invalid.";
 			return(0);
 		} // end if
 
-	// parse out vertex
-		sscanf(token_string, "%f %f %f", &obj.vlistLocal[vertex].x,
-			&obj.vlistLocal[vertex].y,
-			&obj.vlistLocal[vertex].z);
-		obj.vlistLocal[vertex].w = 1;
+		result = Split(line, " ");
+		if (result.size() >= 3) {
+			obj.vlistLocal[vertex].x = std::stof(result[0]);
+			obj.vlistLocal[vertex].y = std::stof(result[1]);
+			obj.vlistLocal[vertex].z = std::stof(result[2]);
+			obj.vlistLocal[vertex].w = 1;
+		}
+		else {
+			std::cout << "object vertex number error";
+			return(0);
+		}
 
 		// scale vertices
 		obj.vlistLocal[vertex].x *= scale.x;
@@ -168,34 +220,37 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 
 	int poly_surface_desc = 0; // PLG/PLX surface descriptor
 	int poly_num_verts = 0; // number of vertices for current poly (always 3)
-	char tmp_string[8];        // temp string to hold surface descriptor in and
+	std::string tmp_string;        // temp string to hold surface descriptor in and
 							   // test if it need to be converted from hex
 
 	// Step 5: load the polygon list
 	for (int poly = 0; poly < obj.numPolygons; poly++)
 	{
 		// get the next polygon descriptor
-		if (!(token_string = Get_Line_PLG(buffer, 255, fp)))
+		if (!(GetLine(fp, line)))
 		{
 			std::cout<<"PLG file error "<<std::endl;
 			return(0);
 		} // end if
 
-		// each vertex list MUST have 3 vertices since we made this a rule that all models
-		// must be constructed of triangles
-		// read in surface descriptor, number of vertices, and vertex list
-		sscanf(token_string, "%s %d %d %d %d", tmp_string,
-			&poly_num_verts, // should always be 3 
-			&obj.plist[poly].vert[0],
-			&obj.plist[poly].vert[1],
-			&obj.plist[poly].vert[2]);
-
-
+		result = Split(line, " ");
+		if (result.size() >= 5) {
+			tmp_string = result[0];
+			poly_num_verts = std::stoi(result[1]);
+			obj.plist[poly].vert[0] = std::stoi(result[2]);
+			obj.plist[poly].vert[1] = std::stoi(result[3]);
+			obj.plist[poly].vert[2] = std::stoi(result[4]);
+		}
+		else {
+			std::cout << "object polygon number error";
+			return(0);
+		}
+		
 		// 面描述符可以是16进制
 		if (tmp_string[0] == '0' && toupper(tmp_string[1]) == 'X')
-			sscanf(tmp_string, "%x", &poly_surface_desc);
+			poly_surface_desc = std::stoi(result[0], 0, 16);
 		else
-			poly_surface_desc = atoi(tmp_string);
+			poly_surface_desc = std::stoi(tmp_string);
 
 		// 多边形顶点列表指向物体顶点列表
 		obj.plist[poly].vlist = obj.vlistLocal;
@@ -278,3 +333,5 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 	return(1);
 
 } // end Load_OBJECT4DV1_PLG
+
+

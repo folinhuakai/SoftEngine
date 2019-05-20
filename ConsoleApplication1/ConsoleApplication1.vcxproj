@@ -185,6 +185,9 @@
   <ItemGroup>
     <ResourceCompile Include="ConsoleApplication1.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\markerg1.plg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

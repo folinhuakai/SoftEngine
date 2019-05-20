@@ -71,4 +71,9 @@
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\markerg1.plg">
+      <Filter>资源文件</Filter>
+    </None>
+  </ItemGroup>
 </Project>
