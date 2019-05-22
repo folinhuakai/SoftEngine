@@ -18,7 +18,7 @@ std::string workingdir()
 }
 
 int Load_OBJECT4DV1_PLG(Object& obj, //物体
-	const char * filename,     //文件名
+	const string &nane,     //文件名
 	Vector4D &scale,	 //初始缩放
 	Vector4D &pos,       //世界坐标位置
 	Vector4D &rot);       // 初始旋转
@@ -32,27 +32,13 @@ int main()
 	TestCoordinate();
 	TestParmLine();
 	Object obj;
-	char name[]= "markerg1.plg";
+	string name = "Resources\\markerg1.plg";
 	Vector4D scale = { 1,1,1,1 };
 	Vector4D pos = { 0,0,0,1 };
 	Vector4D rot = { 0,0,0,1 };
-	/*Load_OBJECT4DV1_PLG(obj,
-		name,     //文件名
-		scale,	 //初始缩放
-		pos,       //世界坐标位置
-		rot);      // 初始旋转
-	return 0;*/
-	string line;
-	ifstream myfile("Resources\\markerg1.plg");
-	
-	if (myfile.is_open())
-	{
-		while (getline(myfile, line))
-		{
-			cout << line << '\n';
-		}
-		myfile.close();
-	}
+	Load_OBJECT4DV1_PLG(obj,name, scale,pos,rot);  
+	cout << obj << endl;
+	return 0;
 
 }
 

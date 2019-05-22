@@ -22,7 +22,6 @@ bool GetLine(std::ifstream &fp, std::string &out)
 	while (!fp.eof())
 	{
 		std::getline(fp, out);
-		
 		// test if this was a blank line or a comment
 		if (out == "" || out[0] == '#')
 			continue;
@@ -68,6 +67,8 @@ float ComputeObjectRadius(Object &obj)
 	return(obj.maxRadius);
 
 } 
+
+/*******************************以空格符分割字符串********************************/
 std::vector<std::string> Split(const std::string &s, const std::string &seperator) {
 	std::vector<std::string> result;
 	typedef std::string::size_type string_size;
@@ -106,73 +107,31 @@ std::vector<std::string> Split(const std::string &s, const std::string &seperato
 	return result;
 }
 
+/**********************************加载plg文件***************************************/
 int Load_OBJECT4DV1_PLG(Object& obj, //物体
-	const char * filename,     //文件名
+	const std::string &filename,     //文件名
 	Vector4D &scale,	 //初始缩放
 	Vector4D &pos,       //世界坐标位置
 	Vector4D &rot)       // 初始旋转
 {
-	// 从磁盘文件内读取plg数据, 允许调用程序对物体进行缩放旋转等操作
-	std::ifstream fp;
-	std::string line;  // working buffer
-
-	char *token_string;  //指向要分析的物体数据文本指针
-
-	// plg文件格式
-
-	// # object描述符
-	// object_name_string num_verts_int num_polys_int
-
-	// # 顶点列表
-	// x0_float y0_float z0_float
-	// x1_float y1_float z1_float
-	// x2_float y2_float z2_float
-	// .
-	// .
-	// xn_float yn_float zn_float
-	//
-	// # 多边形列表
-	// surface_description_ushort num_verts_int v0_index_int v1_index_int ..  vn_index_int
-	// .
-	// .
-	// surface_description_ushort num_verts_int v0_index_int v1_index_int ..  vn_index_int
-
-	// lets keep it simple and assume one element per line
-	// hence we have to find the object descriptor, read it in, then the
-	// vertex list and read it in, and finally the polygon list -- simple :)
-
-	// Step 1: clear out the object and initialize it a bit
 	memset(&obj, 0, sizeof(Object));
+	std::string line;  // working buffer
 	// 设置物体状态为活动、可见
 	obj.state = OBJECT_STATE_ACTIVE | OBJECT_STATE_VISIBLE;
-
 	// 设置物体世界坐标
 	obj.worldPos = pos;
-
 	// Step 2: open the file for reading
-	/*fp.open(filename);
-	if (fp.is_open())
-	{
-		std::cout<<"Couldn't open PLG file "<< filename;
-		return(0);
-	} // end if*/
-	std::ifstream istrm(filename);
-	if (!istrm.is_open()) {
+	std::ifstream fp(filename);
+	if (!fp.is_open()) {
 		std::cout << "failed to open " << filename << '\n';
-	}
-	else {
-		std::string s;
-		if (istrm >> s)                               // text input
-			std::cout << "read back from file: " << ' '<< ' ' << s << '\n';
-	}
+	}	
 	// Step 3: 读取物体描述符
 	if (!(GetLine(fp, line)))
 	{
 		std::cout<<"PLG file error with file "<< filename<<"(object descriptor invalid).";
 		return(0);
 	} // end if
-	std::cout<<"Object Descriptor:"<< line;
-
+	std::cout<<"Object Descriptor:"<< line<<std::endl;
 	// 设置物体描述符
 	auto result = Split(line, " ");
 	if (result.size() >= 3) {
@@ -185,7 +144,6 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 		return(0);
 	}
 
-
 	// Step 4: 顶点列表
 	for (int vertex = 0; vertex < obj.numVertices; vertex++)
 	{
@@ -195,7 +153,7 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 			std::cout<<"PLG file error with file vertex list invalid.";
 			return(0);
 		} // end if
-
+		std::cout << "one Point:" << line<<std::endl;
 		result = Split(line, " ");
 		if (result.size() >= 3) {
 			obj.vlistLocal[vertex].x = std::stof(result[0]);
@@ -207,7 +165,6 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 			std::cout << "object vertex number error";
 			return(0);
 		}
-
 		// scale vertices
 		obj.vlistLocal[vertex].x *= scale.x;
 		obj.vlistLocal[vertex].y *= scale.y;
@@ -219,11 +176,10 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 
 
 	int poly_surface_desc = 0; // PLG/PLX surface descriptor
-	int poly_num_verts = 0; // number of vertices for current poly (always 3)
-	std::string tmp_string;        // temp string to hold surface descriptor in and
-							   // test if it need to be converted from hex
+	int poly_num_verts = 0; // 当前多边形顶点数（一般为3）
+	std::string tmp_string; // 面描述符						
 
-	// Step 5: load the polygon list
+	// Step 5: 加载多边形列表
 	for (int poly = 0; poly < obj.numPolygons; poly++)
 	{
 		// get the next polygon descriptor
@@ -232,7 +188,7 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 			std::cout<<"PLG file error "<<std::endl;
 			return(0);
 		} // end if
-
+		std::cout << "one polygon:" << line << std::endl;
 		result = Split(line, " ");
 		if (result.size() >= 5) {
 			tmp_string = result[0];
@@ -255,12 +211,6 @@ int Load_OBJECT4DV1_PLG(Object& obj, //物体
 		// 多边形顶点列表指向物体顶点列表
 		obj.plist[poly].vlist = obj.vlistLocal;
 
-		// now we that we have the vertex list and we have entered the polygon
-		// vertex index data into the polygon itself, now let's analyze the surface
-		// descriptor and set the fields for the polygon based on the description
-
-		// extract out each field of data from the surface descriptor
-		// first let's get the single/double sided stuff out of the way
 		if ((poly_surface_desc & PLX_2SIDED_FLAG))
 		{
 			obj.plist[poly].attr = obj.plist[poly].attr | POLY4DV1_ATTR_2SIDED;

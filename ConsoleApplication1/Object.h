@@ -99,3 +99,40 @@ private:
 	PolygonFull polyData[MAX_RENDER_POLYGON];
 	int numPolys;//渲染列表中包含的多边形数目
 };
+
+//打印gameobject
+inline std::ostream & operator <<(std::ostream &out, const Object &obj) {
+	std::cout << "id:" << obj.id << std::endl;
+	std::cout << "name:" << obj.name << std::endl;
+	std::cout << "state:"<< std::hex << obj.state << std::endl;
+	std::cout << "attr:"<< std::hex << obj.attr << std::endl;
+	std::cout << "avgRadius:"<<obj.avgRadius << std::endl;
+	std::cout << "avgRadius:"<<obj.maxRadius << std::endl;
+	std::cout << "dir:"<< obj.dir.x << " " << obj.dir.y << " " << obj.dir.z << " " << obj.dir.w << std::endl;
+	std::cout << "worldPos:"<< obj.worldPos.x << " " << obj.worldPos.y << " " << obj.worldPos.z << " " << obj.worldPos.w << std::endl;
+	std::cout << "ux:"<< obj.ux.x<<" "<< obj.ux.y << " " << obj.ux.z << " " << obj.ux.w << std::endl;
+	std::cout << "uz:"<< obj.uz.x<<" "<< obj.uz.y << " " << obj.uz.z << " " << obj.uz.w << std::endl;
+	std::cout << "uy:"<< obj.uy.x<<" "<< obj.uy.y << " " << obj.uy.z << " " << obj.uy.w << std::endl;
+	std::cout << "***********************************************" << std::endl;
+	std::cout << "numVertices:"<< obj.numVertices<< std::endl;
+	for (int i = 0; i < obj.numVertices; ++i) {
+		auto v = obj.vlistLocal[i];
+		std::cout << i<<" vlistLocal:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
+	}
+	std::cout << "***********************************************" << std::endl;
+	for (int i = 0; i < obj.numVertices; ++i) {
+		auto v = obj.vlistTransl[i];
+		std::cout << i << " vlistTransl:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
+	}
+	
+	std::cout << "***********************************************" << std::endl;
+	std::cout << "numPolygons:" << obj.numPolygons << std::endl;
+	for (int i = 0; i < obj.numPolygons; ++i) {
+		auto v = obj.plist[i];
+		std::cout << i << " Polygon:" << "state|" << std::hex << v.state << " attr|" << std::hex << v.state <<" color|" << v.color;
+		std::cout << " index:" << v.vert[0] << " " << v.vert[1] << " " << v.vert[2] << std::endl;
+	}
+	std::cout << "***********************************************" << std::endl;
+
+	return out;
+}
