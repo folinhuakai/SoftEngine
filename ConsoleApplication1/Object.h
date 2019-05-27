@@ -3,6 +3,7 @@
 #include "Matrix.h"
 #include "ParmLine.h"
 #include <string>
+#include "Math.h"
 
 namespace maki{
 	constexpr auto MAX_VERTICES = 128; //物体最大顶点数
@@ -257,11 +258,12 @@ namespace maki{
 		Point4D pos;//相机在世界坐标中的位置
 		Vector4D dir;//欧拉角度或UVN相机模型的注视方向
 
-		Vector4D u;//UVN相机模型的朝向
-		Vector4D v;
-		Vector4D n;
+		Vector4D u{ 1.0,0.0,0.0,1.0 };//UVN相机模型的朝向
+		Vector4D v{ 0.0,1.0,0.0,1.0 };
+		Vector4D n{ 0.0,0.0,1.0,1.0 };
 		Point4D target;//UVN模型目标的位置
 
+		float viewDist{ 0.0 };//焦距
 		float viewDistH{ 0.0 };//水平视距/垂直视距
 		float viewDistV{ 0.0 };
 
@@ -291,6 +293,99 @@ namespace maki{
 		Matrix<float, 4, 4> mcam;//世界坐标到相机坐标变换矩阵
 		Matrix<float, 4, 4> mper;//相机坐标到透视坐标变换矩阵
 		Matrix<float, 4, 4> mscr;//透视坐标到屏幕坐标变换矩阵
+		//初始化相机 @parame fov：视野，单位°
+		void InitCamera(int camAttr, Point4D &camPos,Vector4D camdir, Point4D &camTarget,
+			float nearClipZ, float farClipZ,float fov, 	float viewportWidth,float viewportHeight){
+			attr = camAttr;  
+			pos = camPos;
+			dir = camdir;     
+
+			target = camTarget;	
+			nearClipZ = nearClipZ;
+			farClipZ = farClipZ;
+			
+			viewPortWidth = viewportWidth;   // dimensions of viewport
+			viewPortHeight = viewportHeight;
+
+			viewPortCenterX = (viewPortWidth - 1) / 2; // center of viewport
+			viewPortCenterY = (viewPortHeight - 1) / 2;
+
+			aspectRatio = viewPortWidth / viewPortHeight;
+
+			// 单位矩阵
+			Matrix<float, 4, 4>  mat = {
+				1.0,0.0,0.0,0.0,
+				0.0,1.0,0.0,0.0,
+				0.0,0.0,1.0,0.0,
+				0.0,0.0,0.0,1.0
+			};
+			
+			mcam = mat;
+			mper = mat;
+			mscr = mat;
+			
+			fov = fov;
+
+			//视平面大小为 2 x (2/ar)
+			viewPlaneWidth = 2.0;
+			viewPlaneHeight = 2.0 / aspectRatio;
+		
+			// now we know fov and we know the viewplane dimensions plug into formula and
+			// solve for view distance parameters
+			float tan_fov_div2 = tan(DegToRad(fov / 2));
+
+			viewDist = (0.5)*(viewPlaneWidth)*tan_fov_div2;
+
+			if (fabs(fov - 90.0f) < EPSILON_E5)
+			{
+				Point3D ptOri;	
+
+				Vector3D vn{1,0,-1}; // 面法线
+				rtClipPlane = Plane3D(ptOri, vn,true);
+
+				vn = Vector3D{ -1,0,-1 };
+				ltClipPlane = Plane3D(ptOri, vn,true);
+
+				vn = Vector3D{ 0, 1, -1 };
+				tpClipPlane = Plane3D(ptOri, vn, true);
+
+				vn = Vector3D{ 0, -1, -1 };
+				btClipPlane = Plane3D(ptOri, vn, true);
+			} 
+			else
+			{
+				// now compute clipping planes yuck!
+				POINT3D pt_origin; // point on the plane
+				VECTOR3D_INITXYZ(&pt_origin, 0, 0, 0);
+
+				VECTOR3D vn; // normal to plane
+
+				// since we don't have a 90 fov, computing the normals
+				// are a bit tricky, there are a number of geometric constructions
+				// that solve the problem, but I'm going to solve for the
+				// vectors that represent the 2D projections of the frustrum planes
+				// on the x-z and y-z planes and then find perpendiculars to them
+
+				// right clipping plane, check the math on graph paper 
+				VECTOR3D_INITXYZ(&vn, cam->view_dist, 0, -cam->viewplane_width / 2.0);
+				PLANE3D_Init(&cam->rt_clip_plane, &pt_origin, &vn, 1);
+
+				// left clipping plane, we can simply reflect the right normal about
+				// the z axis since the planes are symetric about the z axis
+				// thus invert x only
+				VECTOR3D_INITXYZ(&vn, -cam->view_dist, 0, -cam->viewplane_width / 2.0);
+				PLANE3D_Init(&cam->lt_clip_plane, &pt_origin, &vn, 1);
+
+				// top clipping plane, same construction
+				VECTOR3D_INITXYZ(&vn, 0, cam->view_dist, -cam->viewplane_width / 2.0);
+				PLANE3D_Init(&cam->tp_clip_plane, &pt_origin, &vn, 1);
+
+				// bottom clipping plane, same inversion
+				VECTOR3D_INITXYZ(&vn, 0, -cam->view_dist, -cam->viewplane_width / 2.0);
+				PLANE3D_Init(&cam->bt_clip_plane, &pt_origin, &vn, 1);
+			} // end else
+
+		} // end Init_CAM4DV1
 	};
 
 	/****************************************打印gameobject*****************************/
