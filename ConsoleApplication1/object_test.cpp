@@ -52,4 +52,17 @@ TEST_CASE("Object Test") {
 	}
 }
 
+TEST_CASE("Camera Test") {
+	Point4D camPos{ 0.0f,0.0f,0.0f,1.0f };
+	Point4D camdir{ 2.0f,3.0f,1.0f,1.0f };
+	Point4D camTarget{ 4.0f,4.0f,4.0f,1.0f };
+	Camera ca1;
+	SECTION("变换测试:平移和缩放") {
+		Camera ca2;
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 400.0f, 400.0f);
+		REQUIRE(obj1 == obj);
+	}
+}
+
 #endif

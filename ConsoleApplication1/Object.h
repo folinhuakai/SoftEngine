@@ -251,10 +251,15 @@ namespace maki{
 	};
 
 	/**********************************相机**********************************/
-	class camera {
+	enum  class CameraType
+	{
+		kModeEuler,
+		kModeUvn,
+	};
+	class Camera {
 	public:
 		int state{ 0 };
-		int attr{ 0 };
+		CameraType attr{ CameraType::kModeUvn };
 		Point4D pos;//相机在世界坐标中的位置
 		Vector4D dir;//欧拉角度或UVN相机模型的注视方向
 
@@ -293,8 +298,9 @@ namespace maki{
 		Matrix<float, 4, 4> mcam;//世界坐标到相机坐标变换矩阵
 		Matrix<float, 4, 4> mper;//相机坐标到透视坐标变换矩阵
 		Matrix<float, 4, 4> mscr;//透视坐标到屏幕坐标变换矩阵
+
 		//初始化相机 @parame fov：视野，单位°
-		void InitCamera(int camAttr, Point4D &camPos,Vector4D camdir, Point4D &camTarget,
+		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D &camdir,const Point4D &camTarget,
 			float nearClipZ, float farClipZ,float fov, 	float viewportWidth,float viewportHeight){
 			attr = camAttr;  
 			pos = camPos;
@@ -354,36 +360,25 @@ namespace maki{
 			} 
 			else
 			{
-				// now compute clipping planes yuck!
-				POINT3D pt_origin; // point on the plane
-				VECTOR3D_INITXYZ(&pt_origin, 0, 0, 0);
+				Point3D ptOrigin;//平面上的一个点
+				Vector3D vn; // 面法线
 
-				VECTOR3D vn; // normal to plane
+				//右裁剪面
+				vn = Vector3D{viewDist,0.0,-viewPlaneWidth/2.0};
+				rtClipPlane = Plane3D{ ptOrigin ,vn,true};
 
-				// since we don't have a 90 fov, computing the normals
-				// are a bit tricky, there are a number of geometric constructions
-				// that solve the problem, but I'm going to solve for the
-				// vectors that represent the 2D projections of the frustrum planes
-				// on the x-z and y-z planes and then find perpendiculars to them
+				// 左裁剪面，与右裁剪面关于z轴对称
+				vn = Vector3D{ -viewDist,0.0,-viewPlaneWidth / 2.0 };
+				ltClipPlane = Plane3D{ ptOrigin ,vn,true };
 
-				// right clipping plane, check the math on graph paper 
-				VECTOR3D_INITXYZ(&vn, cam->view_dist, 0, -cam->viewplane_width / 2.0);
-				PLANE3D_Init(&cam->rt_clip_plane, &pt_origin, &vn, 1);
+				// 上裁剪面
+				vn = Vector3D{ 0.0,viewDist,-viewPlaneWidth / 2.0 };
+				tpClipPlane = Plane3D{ ptOrigin ,vn,true };
 
-				// left clipping plane, we can simply reflect the right normal about
-				// the z axis since the planes are symetric about the z axis
-				// thus invert x only
-				VECTOR3D_INITXYZ(&vn, -cam->view_dist, 0, -cam->viewplane_width / 2.0);
-				PLANE3D_Init(&cam->lt_clip_plane, &pt_origin, &vn, 1);
-
-				// top clipping plane, same construction
-				VECTOR3D_INITXYZ(&vn, 0, cam->view_dist, -cam->viewplane_width / 2.0);
-				PLANE3D_Init(&cam->tp_clip_plane, &pt_origin, &vn, 1);
-
-				// bottom clipping plane, same inversion
-				VECTOR3D_INITXYZ(&vn, 0, -cam->view_dist, -cam->viewplane_width / 2.0);
-				PLANE3D_Init(&cam->bt_clip_plane, &pt_origin, &vn, 1);
-			} // end else
+				//下裁剪面
+				vn = Vector3D{ 0.0,-viewDist,-viewPlaneWidth / 2.0 };
+				btClipPlane = Plane3D{ ptOrigin ,vn,true };
+			} 
 
 		} // end Init_CAM4DV1
 	};
