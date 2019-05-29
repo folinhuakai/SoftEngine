@@ -256,6 +256,16 @@ namespace maki{
 		kModeEuler,
 		kModeUvn,
 	};
+
+	enum class CameraRotSeq
+	{//旋转顺序
+		kSeqXYZ,
+		kSeqYXZ,
+		kSeqXZY,
+		kSeqYZX,
+		kSeqZYX,
+		kSeqZXY,
+	};
 	class Camera {
 	public:
 		int state{ 0 };
@@ -310,7 +320,7 @@ namespace maki{
 			nearClipZ = nearClipZ;
 			farClipZ = farClipZ;
 			
-			viewPortWidth = viewportWidth;   // dimensions of viewport
+			viewPortWidth = viewportWidth;   // 视口大小
 			viewPortHeight = viewportHeight;
 
 			viewPortCenterX = (viewPortWidth - 1) / 2; // center of viewport
@@ -346,16 +356,16 @@ namespace maki{
 			{
 				Point3D ptOri;	
 
-				Vector3D vn{1,0,-1}; // 面法线
+				Vector3D vn{1.f,0.f,-1.f}; // 面法线
 				rtClipPlane = Plane3D(ptOri, vn,true);
 
-				vn = Vector3D{ -1,0,-1 };
+				vn = Vector3D{ -1.f,0.f,-1.f };
 				ltClipPlane = Plane3D(ptOri, vn,true);
 
-				vn = Vector3D{ 0, 1, -1 };
+				vn = Vector3D{ 0.f, 1.f, -1.f };
 				tpClipPlane = Plane3D(ptOri, vn, true);
 
-				vn = Vector3D{ 0, -1, -1 };
+				vn = Vector3D{ 0.f, -1.f, -1.f };
 				btClipPlane = Plane3D(ptOri, vn, true);
 			} 
 			else
@@ -364,23 +374,99 @@ namespace maki{
 				Vector3D vn; // 面法线
 
 				//右裁剪面
-				vn = Vector3D{viewDist,0.0,-viewPlaneWidth/2.0};
+				vn = Vector3D{viewDist,0.0f,-viewPlaneWidth/2.0f};
 				rtClipPlane = Plane3D{ ptOrigin ,vn,true};
 
 				// 左裁剪面，与右裁剪面关于z轴对称
-				vn = Vector3D{ -viewDist,0.0,-viewPlaneWidth / 2.0 };
+				vn = Vector3D{ -viewDist,0.0,-viewPlaneWidth / 2.0f };
 				ltClipPlane = Plane3D{ ptOrigin ,vn,true };
 
 				// 上裁剪面
-				vn = Vector3D{ 0.0,viewDist,-viewPlaneWidth / 2.0 };
+				vn = Vector3D{ 0.0f,viewDist,-viewPlaneWidth / 2.0f };
 				tpClipPlane = Plane3D{ ptOrigin ,vn,true };
 
 				//下裁剪面
-				vn = Vector3D{ 0.0,-viewDist,-viewPlaneWidth / 2.0 };
+				vn = Vector3D{ 0.0f,-viewDist,-viewPlaneWidth / 2.0f };
 				btClipPlane = Plane3D{ ptOrigin ,vn,true };
 			} 
 
 		} // end Init_CAM4DV1
+
+		//根据欧拉角度计算相机变换矩阵，seq确认旋转顺序（世界坐标到相机坐标变换矩阵）
+		void BuildMatrixEuler(CameraRotSeq seq)
+		{
+			//相机平移矩阵逆矩阵
+			Matrix<float, 4, 4> mtInv{
+				1, 0, 0, 0,
+				0, 1, 0, 0,
+				0, 0, 1, 0,
+				-pos.x, -pos.y, -pos.z, 1 };
+
+			Matrix<float, 4, 4>	mtmp;    // 所有逆旋转矩阵积
+	
+			//提取欧拉角度
+			float theta_x = dir.x;
+			float theta_y = dir.y;
+			float theta_z = dir.z;
+
+			// compute the sine and cosine of the angle x
+			float cos_theta = cosf(theta_x);  // no change since cos(-x) = cos(x)
+			float sin_theta = -sinf(theta_x); // sin(-x) = -sin(x)
+			// 绕x轴旋转逆矩阵 
+			Matrix<float, 4, 4>	mxInv{ 
+				1, 0, 0, 0,
+				0, cos_theta, sin_theta, 0,
+				0, -sin_theta, cos_theta, 0,
+				0, 0, 0, 1 };
+
+			// compute the sine and cosine of the angle y
+			cos_theta = cosf(theta_y);  // no change since cos(-x) = cos(x)
+			sin_theta = -sinf(theta_y); // sin(-x) = -sin(x)
+			//绕y轴旋转逆矩阵
+			Matrix<float, 4, 4> myInv{ 
+				cos_theta, 0, -sin_theta, 0,
+				0, 1, 0, 0,
+				sin_theta, 0, cos_theta, 0,
+				0, 0, 0, 1 };
+
+			// compute the sine and cosine of the angle z
+			cos_theta = cosf(theta_z);  // no change since cos(-x) = cos(x)
+			sin_theta = -sinf(theta_z); // sin(-x) = -sin(x)
+			// 绕z轴旋转逆矩阵
+			Matrix<float, 4, 4> mzInv{ cos_theta, sin_theta, 0, 0,
+				-sin_theta, cos_theta, 0, 0,
+				0, 0, 1, 0,
+				0, 0, 0, 1 };
+
+			// now compute inverse camera rotation sequence
+			switch (seq)
+			{
+			case CameraRotSeq::kSeqXYZ :
+				mtmp = mxInv * myInv * mzInv;						
+				break;
+			case CameraRotSeq::kSeqXZY :
+				mtmp = mxInv * mzInv * myInv;
+				break;
+			case CameraRotSeq::kSeqYXZ :
+				mtmp = myInv * mxInv * mzInv;
+				break;
+			case CameraRotSeq::kSeqYZX :
+				mtmp = myInv * mzInv * mxInv;
+				break;
+
+			case CameraRotSeq::kSeqZXY :
+				mtmp = mzInv * mxInv * myInv;
+				break;
+
+			case CameraRotSeq::kSeqZYX :
+				mtmp = mzInv * myInv * mxInv;
+				break;
+
+			default: break;
+			} 
+			// 将平移矩阵乘以旋转矩阵，得到最终变换矩阵
+			mcam = mtInv * mtmp;
+		} 
 	};
 
 	/****************************************打印gameobject*****************************/
