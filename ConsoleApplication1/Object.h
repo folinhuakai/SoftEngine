@@ -266,6 +266,11 @@ namespace maki{
 		kSeqZYX,
 		kSeqZXY,
 	};
+	enum class CameraUvnMode
+	{//Uvn 相机模型
+		kSimple,//简单模型，使用目标位置和观察参考点
+		kSpherical//球面坐标模式，分量x/y作为观察向量的方位角和仰角
+	};
 	class Camera {
 	public:
 		int state{ 0 };
@@ -467,6 +472,63 @@ namespace maki{
 			// 将平移矩阵乘以旋转矩阵，得到最终变换矩阵
 			mcam = mtInv * mtmp;
 		} 
+
+		//根据注视向量n,v,u创建相机变换矩阵
+		void Build_CAM4DV1_Matrix_UVN(CameraUvnMode mode){
+		
+	  // step 1:平移逆矩阵
+			Matrix<float, 4, 4> mtInv{
+					1, 0, 0, 0,
+					0, 1, 0, 0,
+					0, 0, 1, 0,
+					-pos.x, -pos.y, -pos.z, 1 };
+
+			// step 2: 球面模型，计算目标点
+			if (mode == CameraUvnMode::kSimple)
+			{
+				float phi = dir.x; // elevation
+				float theta = dir.y; // heading
+
+				// compute trig functions once
+				float sin_phi = sinf(phi);
+				float cos_phi = cosf(phi);
+
+				float sin_theta = sinf(theta);
+				float cos_theta = cosf(theta);
+
+				// now compute the target point on a unit sphere x,y,z
+				target.x = -1 * sin_phi*sin_theta;
+				target.y = 1 * cos_phi;
+				target.z = 1 * sin_phi*cos_theta;
+			} // end else
+
+		 // 计算 u,v,n
+		 // Step 1: n = <target position - view reference point>
+			n = pos - target;
+			
+			// Step 2: Let v = <0,1,0>
+			v = Vector4D{ 0.f, 1.f, 0.f ,1.f };
+
+			// Step 3: u = (v x n)
+			u = v.Cross(n);
+
+			// Step 4: v = (n x u)
+			v = n.Cross(u);
+
+			// Step 5: 归一化
+			u.Normalize();
+			v.Normalize();
+			n.Normalize();
+		
+			Matrix<float, 4, 4> mtUvn = {
+				u.x, v.x, n.x, 0,
+				u.y, v.y, n.y, 0,
+				u.z, v.z,n.z, 0,
+				0, 0, 0, 1 };
+			// 相机变换矩阵
+			mcam = mtInv * mtUvn;
+
+		} 
 	};
 
 	/****************************************打印gameobject*****************************/
@@ -539,5 +601,12 @@ namespace maki{
 		return flag;
 	}
 	
-
+	/*******************************从世界坐标到相机坐标*************************************/
+	inline void World_To_Camera_OBJECT4DV1(Object &obj, Camera &cam)
+	{//对object中的vlistTrans的顶点进行变换，假设物体的顶点已变换为世界坐标，并结果存在vlistTrans
+		for (int vertex = 0; vertex < obj.numVertices; ++vertex)
+		{
+			obj.vlistTransl[vertex] = obj.vlistTransl[vertex] * cam.mcam;
+		}
+	} 
 }
