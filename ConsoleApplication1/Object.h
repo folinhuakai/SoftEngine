@@ -9,8 +9,7 @@ namespace maki{
 	constexpr auto MAX_VERTICES = 128; //物体最大顶点数
 	constexpr auto MAX_POLYS = 128;//物体最大多边形数
 	constexpr auto MAX_RENDER_POLYGON = 128;//渲染列表最大多边形数
-	constexpr auto OBJECT_STATE_ACTIVE = 0x0001;//物体活动属性
-	constexpr auto OBJECT_STATE_VISIBLE = 0x0002;//物体可见性
+	
 
 	//多边形 attr
 	constexpr auto POLY4DV1_ATTR_2SIDED = 0x0001;
@@ -40,8 +39,21 @@ namespace maki{
 		kLocalOnly,
 		kTransOnly,
 		kLocalToTrans
+	};	
+	enum  ObjectState
+	{
+		kActiveS	= 0x0001,
+		kVisible	= 0x0002,
+		kCull		= 0x0004,	
 	};
 
+
+	enum CullType {
+		kCullXPlane = 0x0001,
+		kCullYPlane = 0x0002,
+		kCullZPlane = 0x0004,
+		kCullXYZPlane = 0x0007,
+	};
 	/**************************多边形***************************/
 	class Polygon
 	{
@@ -283,8 +295,8 @@ namespace maki{
 		Vector4D n{ 0.0,0.0,1.0,1.0 };
 		Point4D target;//UVN模型目标的位置
 
-		float viewDist{ 0.0 };//焦距
-		float viewDistH{ 0.0 };//水平视距/垂直视距
+		float viewDist{ 0.0 };//视距
+		float viewDistH{ 0.0 };//水平视距/垂直视距（透视变换中使用）
 		float viewDistV{ 0.0 };
 
 		float fov{ 0.0 };//水平方向/垂直方向的视野
@@ -315,16 +327,16 @@ namespace maki{
 		Matrix<float, 4, 4> mscr;//透视坐标到屏幕坐标变换矩阵
 
 		//初始化相机 @parame fov：视野，单位°
-		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D &camdir,const Point4D &camTarget,
-			float nearClipZ, float farClipZ,float fov, 	float viewportWidth,float viewportHeight){
-			attr = camAttr;  
+		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D &camdir, const Point4D &camTarget,
+			float nearClipZ, float farClipZ, float fov, float viewportWidth, float viewportHeight) {
+			attr = camAttr;
 			pos = camPos;
-			dir = camdir;     
+			dir = camdir;
 
-			target = camTarget;	
+			target = camTarget;
 			nearClipZ = nearClipZ;
 			farClipZ = farClipZ;
-			
+
 			viewPortWidth = viewportWidth;   // 视口大小
 			viewPortHeight = viewportHeight;
 
@@ -340,47 +352,47 @@ namespace maki{
 				0.0,0.0,1.0,0.0,
 				0.0,0.0,0.0,1.0
 			};
-			
+
 			mcam = mat;
 			mper = mat;
 			mscr = mat;
-			
+
 			fov = fov;
 
 			//视平面大小为 2 x (2/ar)
 			viewPlaneWidth = 2.0;
 			viewPlaneHeight = 2.0 / aspectRatio;
-		
+
 			// now we know fov and we know the viewplane dimensions plug into formula and
 			// solve for view distance parameters
-			float tan_fov_div2 = tan(DegToRad(fov / 2));
+			float tan_fov_div2 = 1 / tan(DegToRad(fov / 2));
 
 			viewDist = (0.5)*(viewPlaneWidth)*tan_fov_div2;
 
 			if (fabs(fov - 90.0f) < EPSILON_E5)
 			{
-				Point3D ptOri;	
+				Point3D ptOri;
 
-				Vector3D vn{1.f,0.f,-1.f}; // 面法线
-				rtClipPlane = Plane3D(ptOri, vn,true);
+				Vector3D vn{ 1.f,0.f,-1.f }; // 面法线
+				rtClipPlane = Plane3D(ptOri, vn, true);
 
 				vn = Vector3D{ -1.f,0.f,-1.f };
-				ltClipPlane = Plane3D(ptOri, vn,true);
+				ltClipPlane = Plane3D(ptOri, vn, true);
 
 				vn = Vector3D{ 0.f, 1.f, -1.f };
 				tpClipPlane = Plane3D(ptOri, vn, true);
 
 				vn = Vector3D{ 0.f, -1.f, -1.f };
 				btClipPlane = Plane3D(ptOri, vn, true);
-			} 
+			}
 			else
 			{
 				Point3D ptOrigin;//平面上的一个点
 				Vector3D vn; // 面法线
 
 				//右裁剪面
-				vn = Vector3D{viewDist,0.0f,-viewPlaneWidth/2.0f};
-				rtClipPlane = Plane3D{ ptOrigin ,vn,true};
+				vn = Vector3D{ viewDist,0.0f,-viewPlaneWidth / 2.0f };
+				rtClipPlane = Plane3D{ ptOrigin ,vn,true };
 
 				// 左裁剪面，与右裁剪面关于z轴对称
 				vn = Vector3D{ -viewDist,0.0,-viewPlaneWidth / 2.0f };
@@ -393,7 +405,7 @@ namespace maki{
 				//下裁剪面
 				vn = Vector3D{ 0.0f,-viewDist,-viewPlaneWidth / 2.0f };
 				btClipPlane = Plane3D{ ptOrigin ,vn,true };
-			} 
+			}
 
 		} // end Init_CAM4DV1
 
@@ -408,7 +420,7 @@ namespace maki{
 				-pos.x, -pos.y, -pos.z, 1 };
 
 			Matrix<float, 4, 4>	mtmp;    // 所有逆旋转矩阵积
-	
+
 			//提取欧拉角度
 			float theta_x = dir.x;
 			float theta_y = dir.y;
@@ -418,7 +430,7 @@ namespace maki{
 			float cos_theta = cosf(theta_x);  // no change since cos(-x) = cos(x)
 			float sin_theta = -sinf(theta_x); // sin(-x) = -sin(x)
 			// 绕x轴旋转逆矩阵 
-			Matrix<float, 4, 4>	mxInv{ 
+			Matrix<float, 4, 4>	mxInv{
 				1, 0, 0, 0,
 				0, cos_theta, sin_theta, 0,
 				0, -sin_theta, cos_theta, 0,
@@ -428,7 +440,7 @@ namespace maki{
 			cos_theta = cosf(theta_y);  // no change since cos(-x) = cos(x)
 			sin_theta = -sinf(theta_y); // sin(-x) = -sin(x)
 			//绕y轴旋转逆矩阵
-			Matrix<float, 4, 4> myInv{ 
+			Matrix<float, 4, 4> myInv{
 				cos_theta, 0, -sin_theta, 0,
 				0, 1, 0, 0,
 				sin_theta, 0, cos_theta, 0,
@@ -446,37 +458,36 @@ namespace maki{
 			// now compute inverse camera rotation sequence
 			switch (seq)
 			{
-			case CameraRotSeq::kSeqXYZ :
-				mtmp = mxInv * myInv * mzInv;						
+			case CameraRotSeq::kSeqXYZ:
+				mtmp = mxInv * myInv * mzInv;
 				break;
-			case CameraRotSeq::kSeqXZY :
+			case CameraRotSeq::kSeqXZY:
 				mtmp = mxInv * mzInv * myInv;
 				break;
-			case CameraRotSeq::kSeqYXZ :
+			case CameraRotSeq::kSeqYXZ:
 				mtmp = myInv * mxInv * mzInv;
 				break;
-			case CameraRotSeq::kSeqYZX :
+			case CameraRotSeq::kSeqYZX:
 				mtmp = myInv * mzInv * mxInv;
 				break;
 
-			case CameraRotSeq::kSeqZXY :
+			case CameraRotSeq::kSeqZXY:
 				mtmp = mzInv * mxInv * myInv;
 				break;
 
-			case CameraRotSeq::kSeqZYX :
+			case CameraRotSeq::kSeqZYX:
 				mtmp = mzInv * myInv * mxInv;
 				break;
 
 			default: break;
-			} 
+			}
 			// 将平移矩阵乘以旋转矩阵，得到最终变换矩阵
 			mcam = mtInv * mtmp;
-		} 
+		}
 
 		//根据注视向量n,v,u创建相机变换矩阵
-		void Build_CAM4DV1_Matrix_UVN(CameraUvnMode mode){
-		
-	  // step 1:平移逆矩阵
+		void BuildCameraMatrixUVN(CameraUvnMode mode) {
+			// step 1:平移逆矩阵
 			Matrix<float, 4, 4> mtInv{
 					1, 0, 0, 0,
 					0, 1, 0, 0,
@@ -484,10 +495,10 @@ namespace maki{
 					-pos.x, -pos.y, -pos.z, 1 };
 
 			// step 2: 球面模型，计算目标点
-			if (mode == CameraUvnMode::kSimple)
+			if (mode == CameraUvnMode::kSpherical)
 			{
-				float phi = dir.x; // elevation
-				float theta = dir.y; // heading
+				float phi = DegToRad(dir.x); // elevation
+				float theta = DegToRad( dir.y); // heading
 
 				// compute trig functions once
 				float sin_phi = sinf(phi);
@@ -504,8 +515,8 @@ namespace maki{
 
 		 // 计算 u,v,n
 		 // Step 1: n = <target position - view reference point>
-			n = pos - target;
-			
+			n = target - pos;
+
 			// Step 2: Let v = <0,1,0>
 			v = Vector4D{ 0.f, 1.f, 0.f ,1.f };
 
@@ -519,7 +530,7 @@ namespace maki{
 			u.Normalize();
 			v.Normalize();
 			n.Normalize();
-		
+
 			Matrix<float, 4, 4> mtUvn = {
 				u.x, v.x, n.x, 0,
 				u.y, v.y, n.y, 0,
@@ -527,86 +538,12 @@ namespace maki{
 				0, 0, 0, 1 };
 			// 相机变换矩阵
 			mcam = mtInv * mtUvn;
-
-		} 
+		}
 	};
-
-	/****************************************打印gameobject*****************************/
-	inline std::ostream & operator <<(std::ostream &out, const Object &obj) {
-		std::cout << "id:" << obj.id << std::endl;
-		std::cout << "name:" << obj.name << std::endl;
-		std::cout << "state:" << std::hex << obj.state << std::endl;
-		std::cout << "attr:" << std::hex << obj.attr << std::endl;
-		std::cout << "avgRadius:" << obj.avgRadius << std::endl;
-		std::cout << "avgRadius:" << obj.maxRadius << std::endl;
-		std::cout << "dir:" << obj.dir.x << " " << obj.dir.y << " " << obj.dir.z << " " << obj.dir.w << std::endl;
-		std::cout << "worldPos:" << obj.worldPos.x << " " << obj.worldPos.y << " " << obj.worldPos.z << " " << obj.worldPos.w << std::endl;
-		std::cout << "ux:" << obj.ux.x << " " << obj.ux.y << " " << obj.ux.z << " " << obj.ux.w << std::endl;
-		std::cout << "uz:" << obj.uz.x << " " << obj.uz.y << " " << obj.uz.z << " " << obj.uz.w << std::endl;
-		std::cout << "uy:" << obj.uy.x << " " << obj.uy.y << " " << obj.uy.z << " " << obj.uy.w << std::endl;
-		std::cout << "***********************************************" << std::endl;
-		std::cout << "numVertices:" << obj.numVertices << std::endl;
-		for (int i = 0; i < obj.numVertices; ++i) {
-			auto v = obj.vlistLocal[i];
-			std::cout << i << " vlistLocal:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
-		}
-		std::cout << "***********************************************" << std::endl;
-		for (int i = 0; i < obj.numVertices; ++i) {
-			auto v = obj.vlistTransl[i];
-			std::cout << i << " vlistTransl:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
-		}
-
-		std::cout << "***********************************************" << std::endl;
-		std::cout << "numPolygons:" << obj.numPolygons << std::endl;
-		for (int i = 0; i < obj.numPolygons; ++i) {
-			auto v = obj.plist[i];
-			std::cout << i << " Polygon:" << "state|" << std::hex << v.state << " attr|" << std::hex << v.state << " color|" << v.color;
-			std::cout << " index:" << v.vert[0] << " " << v.vert[1] << " " << v.vert[2] << std::endl;
-		}
-		std::cout << "***********************************************" << std::endl;
-
-		return out;
-	}
-
-	inline bool operator ==(const Object&a, const Object&b) {
-		if (&a == &b) {
-			return true;
-		}
-		bool flag = true;
-		flag = (a.numPolygons == b.numPolygons) &&
-			(a.numVertices == b.numVertices) &&
-			(a.state == b.state) &&
-			(a.attr == b.attr) && 
-			(fabs(a.avgRadius - b.avgRadius) < EPSILON_E5) && 
-			(fabs(a.maxRadius - b.maxRadius) < EPSILON_E5) &&
-			(a.ux == b.ux) &&
-			(a.uy == b.uy) &&
-			(a.uz == b.uz) &&
-			(a.worldPos == b.worldPos) &&
-			(a.dir == b.dir);
-		if (!flag) {
-			return flag;
-		}
-		else {
-			for (int i = 0; i < a.numVertices; ++i) {
-				if (a.vlistLocal[i] == b.vlistLocal[i] && a.vlistTransl[i] == b.vlistTransl[i]) {
-					continue;
-				}
-				else {
-					return false;
-				}
-
-			}
-		}
-		return flag;
-	}
-	
-	/*******************************从世界坐标到相机坐标*************************************/
-	inline void World_To_Camera_OBJECT4DV1(Object &obj, Camera &cam)
-	{//对object中的vlistTrans的顶点进行变换，假设物体的顶点已变换为世界坐标，并结果存在vlistTrans
-		for (int vertex = 0; vertex < obj.numVertices; ++vertex)
-		{
-			obj.vlistTransl[vertex] = obj.vlistTransl[vertex] * cam.mcam;
-		}
-	} 
+	std::ostream & operator <<(std::ostream &out, const Object &obj);
+	bool operator ==(const Object&a, const Object&b);
+	void WorldToCamera(Object &obj, Camera &cam);
+	void WorldToCamera(RenderList &rdList, Camera &cam);
+	bool CullObject(Object &obj, Camera &cam, CullType cullflags);
+	void ResetOjbectState(Object &obj);
 }

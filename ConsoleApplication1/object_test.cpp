@@ -81,6 +81,19 @@ TEST_CASE("Camera Test") {
 		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
 		REQUIRE(ca1.mcam == mat);
 	}
+	SECTION("相机初始化测试3") {
+		camPos = Point4D{10.0f,20.0f,30.0f,1.0f };
+		camdir = Point4D{60.0f,60.0f,0.0f,1.0f };
+		Matrix<float, 4, 4> mat = {
+		1,0,0,0,
+		0,0.525321f,0.850903,0,
+		0,-0.850903,0.525321f,0,
+		-100.0f,150.206665f,-327.777283f,1 };
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		ca1.BuildCameraMatrixUVN(CameraUvnMode::kSpherical);
+		REQUIRE(ca1.mcam == mat);
+	}
 }
 
 #endif
