@@ -116,7 +116,7 @@ namespace maki {
 		//memset(&obj, 0, sizeof(Object));
 		std::string line;  // working buffer
 		// 设置物体状态为活动、可见
-		obj.state = OBJECT_STATE_ACTIVE | OBJECT_STATE_VISIBLE;
+		obj.state = ObjectState::kActiveS | ObjectState::kVisible;
 		// 设置物体世界坐标
 		obj.worldPos = wordlPos;
 		// Step 2: open the file for reading

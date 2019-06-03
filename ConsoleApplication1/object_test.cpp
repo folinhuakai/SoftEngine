@@ -53,15 +53,46 @@ TEST_CASE("Object Test") {
 }
 
 TEST_CASE("Camera Test") {
-	Point4D camPos{ 0.0f,0.0f,0.0f,1.0f };
-	Point4D camdir{ 2.0f,3.0f,1.0f,1.0f };
+	Point4D camPos{ 100.0f,200.0f,300.0f,1.0f };
+	Point4D camdir{ -45.0f,0.0f,0.0f,1.0f };
 	Point4D camTarget{ 4.0f,4.0f,4.0f,1.0f };
 	Camera ca1;
-	SECTION("变换测试:平移和缩放") {
-		Camera ca2;
+	SECTION("相机初始化测试1") {
+		Vector3D v{0.0f, 0.707107f,-0.707107f};
 		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
 			50.0f, 500.0f, 90, 400.0f, 400.0f);
-		REQUIRE(obj1 == obj);
+		REQUIRE(ca1.tpClipPlane.n == v);
+	}
+
+	SECTION("相机初始化测试2") {
+		Vector3D v{ 0.0f, 0.707107f,-0.707107f };
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		REQUIRE(ca1.tpClipPlane.n == v);
+	}
+	SECTION("相机初始化测试2") {
+		Matrix<float, 4, 4> mat = {
+		1,0,0,0,
+		0,0.525321f,0.850903,0,
+		0,-0.850903,0.525321f,0,
+		-100.0f,150.206665f,-327.777283f,1 };
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
+		REQUIRE(ca1.mcam == mat);
+	}
+	SECTION("相机初始化测试3") {
+		camPos = Point4D{10.0f,20.0f,30.0f,1.0f };
+		camdir = Point4D{60.0f,60.0f,0.0f,1.0f };
+		Matrix<float, 4, 4> mat = {
+		1,0,0,0,
+		0,0.525321f,0.850903,0,
+		0,-0.850903,0.525321f,0,
+		-100.0f,150.206665f,-327.777283f,1 };
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		ca1.BuildCameraMatrixUVN(CameraUvnMode::kSpherical);
+		REQUIRE(ca1.mcam == mat);
 	}
 }
 
