@@ -149,9 +149,51 @@ namespace maki {
 			if (!(curPoly.state &PloygonStates::kActive)) {
 				continue;
 			}
-			obj.state = obj.state & (!PloygonStates::kClipped);
-			obj.state = obj.state & (!PloygonStates::kBackface);
+			curPoly.state = curPoly.state & (!PloygonStates::kClipped);
+			curPoly.state = curPoly.state & (!PloygonStates::kBackface);
 
 		} 
 	}
+
+	/*******************************背面清除*************************************/
+	void RemoveBackfacesObject(Object &obj, Camera cam){
+		//根据vlistTrans中顶点数据及相机位置消除物体的背面多边形（面法线与视点间的向量点乘，<90°即背面）
+		if (obj.state & ObjectState::kCull)
+			return;
+
+		// 处理每个多边形
+		for (int poly = 0; poly < obj.numPolygons; ++poly)
+		{
+			// acquire polygon
+			auto currPoly = obj.plist[poly];		
+			// 判断多边形有效性
+			if (!(currPoly.state & PloygonStates::kActive) ||
+				(currPoly.state & PloygonStates::kBackface) ||
+				(currPoly.attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly.state & PloygonStates::kClipped))
+				continue; // move onto next poly
+
+			 // 获得顶点下标（不是自包含）
+			int vindex_0 = currPoly.vert[0];
+			int vindex_1 = currPoly.vert[1];
+			int vindex_2 = currPoly.vert[2];
+
+			//计算多边形面法线，顶点是按顺时针方向排列
+			auto u = obj.vlistTransl[vindex_1] - obj.vlistTransl[vindex_0];//p0->p1
+			auto v = obj.vlistTransl[vindex_2] - obj.vlistTransl[vindex_0];//p0->p2
+			auto n = u.Cross(v);//u x v
+
+			auto view = cam.pos - obj.vlistTransl[vindex_0];//视点指向多边形向量
+
+			// 计算点积
+			float dp = n * view;
+
+			// if the sign is > 0 then visible, 0 = scathing, < 0 invisible
+			if (dp <= 0.0) {
+				currPoly.state = currPoly.state & PloygonStates::kBackface;
+			}
+
+		} // end for poly
+
+	} // end Remove_Backfaces_OBJECT4DV1
 }

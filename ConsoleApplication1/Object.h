@@ -60,7 +60,7 @@ namespace maki{
 	public:
 		Polygon(){}
 		~Polygon() {}
-		PloygonStates state{ PloygonStates::kInit };//状态
+		int state{ PloygonStates::kInit };//状态
 		int attr{ 0 };//物理属性
 		int color{ 0 };//颜色
 		Point4D *vlist{};//顶点列表
@@ -73,7 +73,7 @@ namespace maki{
 	public:
 		PolygonFull() {}
 		~PolygonFull() {}
-		PloygonStates state{ PloygonStates::kInit };//状态
+		int state{ PloygonStates::kInit };//状态
 		int attr{ 0 };
 		int color{ 0 };
 
@@ -450,7 +450,8 @@ namespace maki{
 			cos_theta = cosf(theta_z);  // no change since cos(-x) = cos(x)
 			sin_theta = -sinf(theta_z); // sin(-x) = -sin(x)
 			// 绕z轴旋转逆矩阵
-			Matrix<float, 4, 4> mzInv{ cos_theta, sin_theta, 0, 0,
+			Matrix<float, 4, 4> mzInv{
+				cos_theta, sin_theta, 0, 0,
 				-sin_theta, cos_theta, 0, 0,
 				0, 0, 1, 0,
 				0, 0, 0, 1 };

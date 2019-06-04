@@ -89,10 +89,41 @@ TEST_CASE("Camera Test") {
 		0.0f, 0.849970043f, -0.526830912f, 0.0f,
 		0.341697246f, -0.495121002f, -0.798810482f, 0.0,
 		-0.852816582f, -0.345603943f, 37.4052582f, 1.0f };
-		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+		ca1.InitCamera(CameraType::kModeUvn, camPos, camdir, camTarget,
 			50.0f, 500.0f, 90, 640.0f, 480.0f);
 		ca1.BuildCameraMatrixUVN(CameraUvnMode::kSpherical);
 		REQUIRE(ca1.mcam == mat);
+	}	
+}
+
+TEST_CASE("渲染流水线 Test") {
+	maki::Object obj;
+	std::string name = "Resources\\markerg1.plg";
+	Vector4D scale = { 1,1,1,1 };
+	Vector4D pos = { 0,0,0,1 };
+	Vector4D rot = { 0,0,0,1 };
+	Load_OBJECT4DV1_PLG(obj, name, scale, pos, rot);
+
+	Point4D camPos{ 100.0f,200.0f,300.0f,1.0f };
+	Point4D camdir{ -45.0f,0.0f,0.0f,1.0f };
+	Point4D camTarget{ 4.0f,4.0f,4.0f,1.0f };
+	Camera ca1;
+
+	SECTION("世界坐标到相机坐标") {
+		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
+
+		obj.TransfromToWorld(TransfromType::kLocalToTrans);
+		WorldToCamera(obj, ca1);
+		Point4D p0{ -100.000000 ,150.731995 ,-326.926392,1.0 };
+		Point4D p1{ -101.000000 ,151.057571 ,-328.302612,1.0 };
+		Point4D p2{ -99.0000000 ,151.057571 ,-328.302612,1.0 };
+		Point4D p3{ -100.000000 ,149.355759 ,-327.251953,1.0 };
+		REQUIRE(obj.vlistTransl[0] == p0);
+		REQUIRE(obj.vlistTransl[1] == p1);
+		REQUIRE(obj.vlistTransl[2] == p2);
+		REQUIRE(obj.vlistTransl[3] == p3);
 	}
 }
 
