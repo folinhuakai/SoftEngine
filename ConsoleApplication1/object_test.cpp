@@ -85,10 +85,10 @@ TEST_CASE("Camera Test") {
 		camPos = Point4D{10.0f,20.0f,30.0f,1.0f };
 		camdir = Point4D{60.0f,60.0f,0.0f,1.0f };
 		Matrix<float, 4, 4> mat = {
-		1,0,0,0,
-		0,0.525321f,0.850903,0,
-		0,-0.850903,0.525321f,0,
-		-100.0f,150.206665f,-327.777283f,1 };
+		-0.939810097f, -0.180016667f, -0.290432453f, 0.0f,
+		0.0f, 0.849970043f, -0.526830912f, 0.0f,
+		0.341697246f, -0.495121002f, -0.798810482f, 0.0,
+		-0.852816582f, -0.345603943f, 37.4052582f, 1.0f };
 		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
 			50.0f, 500.0f, 90, 640.0f, 480.0f);
 		ca1.BuildCameraMatrixUVN(CameraUvnMode::kSpherical);

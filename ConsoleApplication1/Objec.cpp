@@ -138,32 +138,20 @@ namespace maki {
 		return true;
 	}
 	/*******************************清除物体状态*************************************/
-	void ResetOjbectState(Object &obj)
-	{
-		// this function resets the sent object and redies it for 
-		// transformations, basically just resets the culled, clipped and
-		// backface flags, but here's where you would add stuff
-		// to ready any object for the pipeline
-		// the object is valid, let's rip it apart polygon by polygon
+	void ResetOjbectState(Object &obj){
+		//清除物体剔除状态
+		obj.state = obj.state & (!ObjectState::kCull);
 
-		// reset object's culled flag
-		/*RESET_BIT(obj->state, OBJECT4DV1_STATE_CULLED);
-
-		// now the clipped and backface flags for the polygons 
-		for (int poly = 0; poly < obj->num_polys; poly++)
+		// 重置多边形裁剪和背面剔除标记
+		for (int poly = 0; poly < obj.numPolygons; poly++)
 		{
-			// acquire polygon
-			POLY4DV1_PTR curr_poly = &obj->plist[poly];
+			auto curPoly = obj.plist[poly];
+			if (!(curPoly.state &PloygonStates::kActive)) {
+				continue;
+			}
+			obj.state = obj.state & (!PloygonStates::kClipped);
+			obj.state = obj.state & (!PloygonStates::kBackface);
 
-			// first is this polygon even visible?
-			if (!(curr_poly->state & POLY4DV1_STATE_ACTIVE))
-				continue; // move onto next poly
-
-			 // reset clipped and backface flags
-			RESET_BIT(curr_poly->state, POLY4DV1_STATE_CLIPPED);
-			RESET_BIT(curr_poly->state, POLY4DV1_STATE_BACKFACE);
-
-		} // end for poly*/
-
-	} // end Reset_OBJECT4DV1
+		} 
+	}
 }
