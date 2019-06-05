@@ -196,4 +196,36 @@ namespace maki {
 		} // end for poly
 
 	} // end Remove_Backfaces_OBJECT4DV1
+
+	void RemoveBackfacesRenderlist(RenderList rendlist, Camera cam){
+		// 设置多边形背面状态
+		for (int poly = 0; poly < rendlist.numPolys; ++poly)
+		{
+			// acquire current polygon
+			auto currPoly = rendlist.polyPtrs[poly];
+
+			if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+				(currPoly->state & PloygonStates::kClipped) ||
+				(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly->state & PloygonStates::kBackface))
+				continue; // move onto next poly
+
+			//计算多边形面法线，顶点是按顺时针方向排列
+			auto u = currPoly->tvlist[1] - currPoly->tvlist[0];//p0->p1
+			auto v = currPoly->tvlist[2] - currPoly->tvlist[0];//p0->p2
+			auto n = u.Cross(v);//u x v
+
+			auto view = cam.pos - currPoly->tvlist[0];//视点指向多边形向量
+
+			// 计算点积
+			float dp = n * view;
+
+			// if the sign is > 0 then visible, 0 = scathing, < 0 invisible
+			if (dp <= 0.0) {
+				currPoly->state = currPoly->state & PloygonStates::kBackface;
+			}
+
+		} // end for poly
+
+	} // end RemoveBackfacesRenderlist
 }
