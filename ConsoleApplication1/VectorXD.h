@@ -203,6 +203,12 @@ namespace maki {
 			z *= inv;
 			w = 1;
 		}
+		void DivByW() {//除于w，齐次-》非齐次
+			x /= w;
+			y /= w;
+			z /= w;
+			w = 1;
+		}
 		float x, y, z, w;
 	};
 
@@ -244,6 +250,7 @@ namespace maki {
 		out << "x = " << vec.x << " y = " << vec.y << " z = " << vec.z << " w = " << vec.w << std::endl;
 		return out;
 	}
+	
 
 	/******************四元数***************/
 	class Quat {

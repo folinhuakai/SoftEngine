@@ -108,12 +108,11 @@ TEST_CASE("渲染流水线 Test") {
 	Point4D camdir{ -45.0f,0.0f,0.0f,1.0f };
 	Point4D camTarget{ 4.0f,4.0f,4.0f,1.0f };
 	Camera ca1;
-
+	ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
+		50.0f, 500.0f, 90, 640.0f, 480.0f);
 	SECTION("世界坐标到相机坐标") {
-		ca1.InitCamera(CameraType::kModeEuler, camPos, camdir, camTarget,
-			50.0f, 500.0f, 90, 640.0f, 480.0f);
+		
 		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
-
 		obj.TransfromToWorld(TransfromType::kLocalToTrans);
 		WorldToCamera(obj, ca1);
 		Point4D p0{ -100.000000 ,150.731995 ,-326.926392,1.0 };
@@ -124,6 +123,16 @@ TEST_CASE("渲染流水线 Test") {
 		REQUIRE(obj.vlistTransl[1] == p1);
 		REQUIRE(obj.vlistTransl[2] == p2);
 		REQUIRE(obj.vlistTransl[3] == p3);
+	}
+	SECTION("创建透视变换矩阵") {
+		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
+		Matrix<float, 4, 4> mt{
+			ca1.viewDist, 0, 0, 0,
+			0, ca1.viewDist*ca1.aspectRatio, 0, 0,
+			0, 0, 1, 1,
+			0, 0, 0, 0 };
+		auto m_test = BuildCameraToPerspectiveMtri(ca1);
+		REQUIRE(m_test == mt);
 	}
 }
 

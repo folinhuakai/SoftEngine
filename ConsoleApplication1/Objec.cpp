@@ -228,4 +228,68 @@ namespace maki {
 		} // end for poly
 
 	} // end RemoveBackfacesRenderlist
+
+	/*********************************透视变换*************************************/
+	Matrix<float, 4, 4> BuildCameraToPerspectiveMtri(Camera &cam)
+	{//如果使用透视矩阵进行变换，则变换后w不再为1，需要调用ConvertFromHomo4DRend
+		Matrix<float, 4, 4> mt{
+			cam.viewDist, 0, 0, 0,
+			0, cam.viewDist*cam.aspectRatio, 0, 0,
+			0, 0, 1, 1,
+			0, 0, 0, 0 };
+		return mt;
+
+	} 
+
+	// 将渲染列表的所有有效多边形顶点从齐次-》非齐次，xyz除于w
+	void ConvertFromHomo4DRend(RenderList rendlist){
+		for (int poly = 0; poly < rendList.numPolys; poly++)
+		{
+			// acquire current polygon
+			auto currPoly = rendList.polyPtrs[poly];
+
+			if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+				(currPoly->state & PloygonStates::kClipped) ||
+				(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly->state & PloygonStates::kBackface))
+				continue; // move onto next poly
+
+		 // all good, let's transform 
+			for (int vertex = 0; vertex < 3; vertex++)
+			{
+				currPoly->tvlist[vertex].DivByW();
+			} // end for vertex
+
+		} // end for poly		
+
+	} 
+
+	//渲染列表透视变换(这里假设渲染列表的多边形已被变换为相机坐标)
+	void CameraToPerspectiveRenderlist(RenderList &rendList,Camera &cam){
+		for (int poly = 0; poly < rendList.numPolys; poly++)
+		{
+			// acquire current polygon
+			auto currPoly = rendList.polyPtrs[poly];
+
+			if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+				(currPoly->state & PloygonStates::kClipped) ||
+				(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly->state & PloygonStates::kBackface))
+				continue; // move onto next poly
+
+		 // all good, let's transform 
+			for (int vertex = 0; vertex < 3; vertex++)
+			{
+				float z = currPoly->tvlist[vertex].z;
+
+				// transform the vertex by the view parameters in the camera
+				currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
+				currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;			
+
+			} // end for vertex
+
+		} // end for poly
+
+	} // end Camera_To_Perspective_RENDERLIST4DV1
+
 }

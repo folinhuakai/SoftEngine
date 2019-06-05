@@ -547,4 +547,5 @@ namespace maki{
 	void WorldToCamera(RenderList &rdList, Camera &cam);
 	bool CullObject(Object &obj, Camera &cam, CullType cullflags);
 	void ResetOjbectState(Object &obj);
+	Matrix<float, 4, 4> BuildCameraToPerspectiveMtri(Camera &cam);
 }
