@@ -242,7 +242,7 @@ namespace maki {
 	} 
 
 	// 将渲染列表的所有有效多边形顶点从齐次-》非齐次，xyz除于w
-	void ConvertFromHomo4DRend(RenderList rendlist){
+	void ConvertFromHomo4DRend(RenderList rendList){
 		for (int poly = 0; poly < rendList.numPolys; poly++)
 		{
 			// acquire current polygon
@@ -291,5 +291,67 @@ namespace maki {
 		} // end for poly
 
 	} // end Camera_To_Perspective_RENDERLIST4DV1
+
+	/*********************************视口变换*************************************/
+	void PerspectiveToScreenRenderlist(RenderList &rendList,Camera &cam){
+		//渲染列表已完成透视变换并归一化，透视坐标-》屏幕坐标
+		for (int poly = 0; poly < rendList.numPolys; poly++)
+		{
+			// acquire current polygon
+			auto currPoly = rendList.polyPtrs[poly];
+
+			if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+				(currPoly->state & PloygonStates::kClipped) ||
+				(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly->state & PloygonStates::kBackface))
+				continue; // move onto next poly
+
+			float alpha = (0.5*cam.viewPortWidth - 0.5);
+			float beta = (0.5*cam.viewPortHeight - 0.5);
+
+			// all good, let's transform 
+			for (int vertex = 0; vertex < 3; vertex++)
+			{//坐标缩放，反转y轴
+				currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
+				currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+			} // end for vertex
+
+		} // end for poly	
+	} 
+
+	void CameraToScreenRenderList(RenderList &rendList,Camera &cam){
+		//相机坐标-》屏幕坐标
+		for (int poly = 0; poly < rendList.numPolys; poly++)
+		{
+			// acquire current polygon
+			auto currPoly = rendList.polyPtrs[poly];
+
+			if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+				(currPoly->state & PloygonStates::kClipped) ||
+				(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+				(currPoly->state & PloygonStates::kBackface))
+				continue; // move onto next poly
+
+			float alpha = (0.5*cam.viewPortWidth - 0.5);
+			float beta = (0.5*cam.viewPortHeight - 0.5);
+
+			// all good, let's transform 
+			for (int vertex = 0; vertex < 3; vertex++)
+			{
+				float z = currPoly->tvlist[vertex].z;
+
+				// transform the vertex by the view parameters in the camera
+				currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
+				currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;
+
+				//坐标缩放，反转y轴
+				currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
+				currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+
+			} // end for vertex
+
+		} // end for poly
+
+	} // end Camera_To_Perspective_Screen_RENDERLIST4DV1
 
 }
