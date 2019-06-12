@@ -114,7 +114,7 @@ TEST_CASE("渲染流水线 Test") {
 		
 		ca1.BuildMatrixEuler(CameraRotSeq::kSeqXYZ);
 		obj.TransfromToWorld(TransfromType::kLocalToTrans);
-		WorldToCamera(obj, ca1);
+		obj.WorldToCamera(ca1);
 		Point4D p0{ -100.000000 ,150.731995 ,-326.926392,1.0 };
 		Point4D p1{ -101.000000 ,151.057571 ,-328.302612,1.0 };
 		Point4D p2{ -99.0000000 ,151.057571 ,-328.302612,1.0 };
@@ -131,7 +131,7 @@ TEST_CASE("渲染流水线 Test") {
 			0, ca1.viewDist*ca1.aspectRatio, 0, 0,
 			0, 0, 1, 1,
 			0, 0, 0, 0 };
-		auto m_test = BuildCameraToPerspectiveMtri(ca1);
+		auto m_test = ca1.GetCameraToPerspectiveMtri();
 		REQUIRE(m_test == mt);
 	}
 }

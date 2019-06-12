@@ -1,7 +1,5 @@
 #pragma once
-#include "VectorXD.h"
-#include "Matrix.h"
-#include "ParmLine.h"
+#include "Camera.h"
 #include <string>
 #include "Math.h"
 
@@ -134,7 +132,7 @@ namespace maki{
 				uz = uz * mat;
 			}
 		}
-		// 将物体从局部坐标转换成世界坐标
+		// 将物体从局部坐标转换成世界坐标(直接法)
 		void TransfromToWorld(const TransfromType type = TransfromType::kLocalToTrans) {
 			if (type == TransfromType::kLocalToTrans) {
 				for (int i = 0; i < numVertices; ++i) {
@@ -148,6 +146,7 @@ namespace maki{
 			}
 
 		}
+		// 矩阵法
 		void TransfromToWorldMat(TransfromType type = TransfromType::kLocalToTrans,bool isChange = true) {
 			Matrix<float, 4, 4> mat = {
 				1,0,0,0,
@@ -156,7 +155,157 @@ namespace maki{
 				worldPos.x,worldPos.y,worldPos.z,1 };
 			TransfromObject(mat, TransfromType::kLocalToTrans, isChange);
 		}
-		
+		//世界坐标到相机坐标
+		void WorldToCamera(Camera &cam)
+		{//对object中的vlistTrans的顶点进行变换，假设物体的顶点已变换为世界坐标，并结果存在vlistTrans
+			for (int vertex = 0; vertex < numVertices; ++vertex)
+			{
+				vlistTransl[vertex] = vlistTransl[vertex] * cam.mcam;
+			}
+		}
+		//相机坐标到屏幕坐标变换
+		void CameraToScreen(Camera &cam) {
+
+			float alpha = (0.5*cam.viewPortWidth - 0.5);
+			float beta = (0.5*cam.viewPortHeight - 0.5);
+
+			for (int vertex = 0; vertex < numVertices; ++vertex) {
+				float z = vlistTransl[vertex].z;
+
+				// transform the vertex by the view parameters in the camera
+				vlistTransl[vertex].x = cam.viewDist * vlistTransl[vertex].x / z;
+				vlistTransl[vertex].y = cam.viewDist * vlistTransl[vertex].y*cam.aspectRatio / z;
+				// z = z, so no change
+
+				vlistTransl[vertex].x = alpha + alpha * vlistTransl[vertex].x;
+				vlistTransl[vertex].y = beta - beta * vlistTransl[vertex].y;
+			} // end for vertex
+
+		} // end Camera_To_P
+
+		//透视变换
+		void CameraToPerspective(Camera &cam) {
+			for (int vertex = 0; vertex < numVertices; ++vertex) {
+				float z = vlistTransl[vertex].z;
+
+				// transform the vertex by the view parameters in the camera
+				vlistTransl[vertex].x = cam.viewDist * vlistTransl[vertex].x / z;
+				vlistTransl[vertex].y = cam.viewDist * vlistTransl[vertex].y * cam.aspectRatio / z;
+			} // end for vertex
+		}
+
+		//视口变换
+		void PerspectiveToScreen(Camera &cam) {
+			float alpha = (0.5*cam.viewPortWidth - 0.5);
+			float beta = (0.5*cam.viewPortHeight - 0.5);
+
+			for (int vertex = 0; vertex < numVertices; ++vertex) {
+
+				// transform the vertex by the view parameters in the camera
+				vlistTransl[vertex].x = alpha + alpha * vlistTransl[vertex].x;
+				vlistTransl[vertex].y = beta - beta * vlistTransl[vertex].y;
+
+			} // end for vertex
+		}
+
+		// 物体剔除
+		bool CullObject(Camera &cam, CullType cullflags) {//根据相机信息判断物体是否在视景体内，cullflags指定在哪些轴上执行剔除
+		//1.将包围球球心变换到相机坐标
+			auto spherePos = worldPos * cam.mcam;
+
+			// 2: 根据cullflags剔除物体
+			if (cullflags & CullType::kCullZPlane) {//远近裁剪面
+				if (((spherePos.z - maxRadius) > cam.farClipZ) ||
+					((spherePos.z + maxRadius) < cam.nearClipZ)) {
+					state = state | ObjectState::kCull;
+					return false;
+				}
+			} // end if
+
+			if (cullflags & CullType::kCullXPlane) {//左右裁剪面（使用三角相似）
+
+				float z_test = (0.5)*cam.viewPlaneWidth*spherePos.z / cam.viewDist;
+
+				if (((spherePos.x - maxRadius) > z_test) || // right side
+					((spherePos.x + maxRadius) < -z_test))  // left side, note sign change
+				{
+					state = state | ObjectState::kCull;
+					return false;
+				} // end if
+			} // end if
+
+			if (cullflags & CullType::kCullYPlane) {//上下裁剪面（使用三角相似）
+				float z_test = (0.5)*cam.viewPlaneHeight *spherePos.z / cam.viewDist;
+				if (((spherePos.y - maxRadius) > z_test) || // top side
+					((spherePos.y + maxRadius) < -z_test))  // bottom side, note sign change
+				{
+					state = state | ObjectState::kCull;
+					return false;
+				} // end if
+
+			} // end if
+
+			return true;
+		}
+		// 背面消除
+		void RemoveBackfaces(Camera cam) {
+			//根据vlistTrans中顶点数据及相机位置消除物体的背面多边形（面法线与视点间的向量点乘，<90°即背面）
+			if (state & ObjectState::kCull)
+				return;
+
+			// 处理每个多边形
+			for (int poly = 0; poly < numPolygons; ++poly)
+			{
+				// acquire polygon
+				auto currPoly = plist[poly];
+				// 判断多边形有效性
+				if (!(currPoly.state & PloygonStates::kActive) ||
+					(currPoly.state & PloygonStates::kBackface) ||
+					(currPoly.attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly.state & PloygonStates::kClipped))
+					continue; // move onto next poly
+
+				 // 获得顶点下标（不是自包含）
+				int vindex_0 = currPoly.vert[0];
+				int vindex_1 = currPoly.vert[1];
+				int vindex_2 = currPoly.vert[2];
+
+				//计算多边形面法线，顶点是按顺时针方向排列
+				auto u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
+				auto v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2
+				auto n = u.Cross(v);//u x v
+
+				auto view = cam.pos - vlistTransl[vindex_0];//视点指向多边形向量
+
+				// 计算点积
+				float dp = n * view;
+
+				// if the sign is > 0 then visible, 0 = scathing, < 0 invisible
+				if (dp <= 0.0) {
+					currPoly.state = currPoly.state & PloygonStates::kBackface;
+				}
+
+			} // end for poly
+
+		} // end
+
+		//清除物体（裁剪和背面）状态标识
+		void ResetOjbectState() {
+			//清除物体剔除状态
+			state = state & (!ObjectState::kCull);
+
+			// 重置多边形裁剪和背面剔除标记
+			for (int poly = 0; poly < numPolygons; poly++)
+			{
+				auto curPoly = plist[poly];
+				if (!(curPoly.state &PloygonStates::kActive)) {
+					continue;
+				}
+				curPoly.state = curPoly.state & (!PloygonStates::kClipped);
+				curPoly.state = curPoly.state & (!PloygonStates::kBackface);
+
+			}
+		}
 	};
 
 
@@ -176,6 +325,7 @@ namespace maki{
 		//多边形存放数组，为避免每帧都为多边形分配/释放内存
 		PolygonFull polyData[MAX_RENDER_POLYGON];
 		int numPolys{ 0 };//渲染列表中包含的多边形数目
+		
 		//对渲染列表的多边形变换	//@parm rederList 渲染列表，mat 变换矩阵 ，type 指定要变换的坐标
 		void TransformRenderList(Matrix<float, 4, 4> &mat, TransfromType type) {
 			switch (type) {
@@ -228,6 +378,7 @@ namespace maki{
 				break;
 			}
 		}
+		
 		//转换成世界坐标
 		void TransfromToWorld(Vector4D worldPos,TransfromType type = TransfromType::kLocalToTrans) {
 			if (type == TransfromType::kLocalToTrans) {
@@ -260,292 +411,237 @@ namespace maki{
 			}
 
 		}
-	};
-
-	/**********************************相机**********************************/
-	enum  class CameraType
-	{
-		kModeEuler,
-		kModeUvn,
-	};
-
-	enum class CameraRotSeq
-	{//旋转顺序
-		kSeqXYZ,
-		kSeqYXZ,
-		kSeqXZY,
-		kSeqYZX,
-		kSeqZYX,
-		kSeqZXY,
-	};
-	enum class CameraUvnMode
-	{//Uvn 相机模型
-		kSimple,//简单模型，使用目标位置和观察参考点
-		kSpherical//球面坐标模式，分量x/y作为观察向量的方位角和仰角
-	};
-	class Camera {
-	public:
-		int state{ 0 };
-		CameraType attr{ CameraType::kModeUvn };
-		Point4D pos;//相机在世界坐标中的位置
-		Vector4D dir;//欧拉角度或UVN相机模型的注视方向
-
-		Vector4D u{ 1.0,0.0,0.0,1.0 };//UVN相机模型的朝向
-		Vector4D v{ 0.0,1.0,0.0,1.0 };
-		Vector4D n{ 0.0,0.0,1.0,1.0 };
-		Point4D target;//UVN模型目标的位置
-
-		float viewDist{ 0.0 };//视距
-		float viewDistH{ 0.0 };//水平视距/垂直视距（透视变换中使用）
-		float viewDistV{ 0.0 };
-
-		float fov{ 0.0 };//水平方向/垂直方向的视野
-
-		//3d裁剪面，如果视野不是90°，3d裁剪面将为一般性明平面方程
-		float nearClipZ{ 0.0 };//近裁剪面
-		float farClipZ{ 0.0 };//远裁剪面
-
-		Plane3D rtClipPlane;//右裁剪面
-		Plane3D ltClipPlane;//左裁剪面
-		Plane3D tpClipPlane;//上裁剪面
-		Plane3D btClipPlane;//下裁剪面
-
-		float viewPlaneWidth{ 0.0 };//视平面宽度/高度
-		float viewPlaneHeight{ 0.0 };//对于归一化投影，为2x2，否则大小与视口或屏幕窗口相同
-
-		//屏幕和视口是同义词
-
-		float viewPortWidth{ 0.0 };//屏幕大小
-		float viewPortHeight{ 0.0 };//屏幕大小
-		float viewPortCenterX{ 0.0 };//屏幕中心
-		float viewPortCenterY{ 0.0 };
-
-		float aspectRatio{ 0.0 };//屏幕宽高比
-
-		Matrix<float, 4, 4> mcam;//世界坐标到相机坐标变换矩阵
-		Matrix<float, 4, 4> mper;//相机坐标到透视坐标变换矩阵
-		Matrix<float, 4, 4> mscr;//透视坐标到屏幕坐标变换矩阵
-
-		//初始化相机 @parame fov：视野，单位°
-		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D &camdir, const Point4D &camTarget,
-			float nearClipZ, float farClipZ, float fov, float viewportWidth, float viewportHeight) {
-			attr = camAttr;
-			pos = camPos;
-			dir = camdir;
-
-			target = camTarget;
-			nearClipZ = nearClipZ;
-			farClipZ = farClipZ;
-
-			viewPortWidth = viewportWidth;   // 视口大小
-			viewPortHeight = viewportHeight;
-
-			viewPortCenterX = (viewPortWidth - 1) / 2; // center of viewport
-			viewPortCenterY = (viewPortHeight - 1) / 2;
-
-			aspectRatio = viewPortWidth / viewPortHeight;
-
-			// 单位矩阵
-			Matrix<float, 4, 4>  mat = {
-				1.0,0.0,0.0,0.0,
-				0.0,1.0,0.0,0.0,
-				0.0,0.0,1.0,0.0,
-				0.0,0.0,0.0,1.0
-			};
-
-			mcam = mat;
-			mper = mat;
-			mscr = mat;
-
-			fov = fov;
-
-			//视平面大小为 2 x (2/ar)
-			viewPlaneWidth = 2.0;
-			viewPlaneHeight = 2.0 / aspectRatio;
-
-			// now we know fov and we know the viewplane dimensions plug into formula and
-			// solve for view distance parameters
-			float tan_fov_div2 = 1 / tan(DegToRad(fov / 2));
-
-			viewDist = (0.5)*(viewPlaneWidth)*tan_fov_div2;
-
-			if (fabs(fov - 90.0f) < EPSILON_E5)
-			{
-				Point3D ptOri;
-
-				Vector3D vn{ 1.f,0.f,-1.f }; // 面法线
-				rtClipPlane = Plane3D(ptOri, vn, true);
-
-				vn = Vector3D{ -1.f,0.f,-1.f };
-				ltClipPlane = Plane3D(ptOri, vn, true);
-
-				vn = Vector3D{ 0.f, 1.f, -1.f };
-				tpClipPlane = Plane3D(ptOri, vn, true);
-
-				vn = Vector3D{ 0.f, -1.f, -1.f };
-				btClipPlane = Plane3D(ptOri, vn, true);
+	    
+		//世界坐标-》相机坐标
+		void WorldToCamera(Camera &cam)
+		{//根据相机变换矩阵将渲染列表中的多边形换为相机坐标
+			for (int i = 0; i < numPolys; ++i) {
+				auto curPoly = polyPtrs[i];
+				if (curPoly == nullptr ||
+					!(curPoly->state &PloygonStates::kActive) ||
+					curPoly->state &PloygonStates::kClipped ||
+					curPoly->state &PloygonStates::kBackface) {
+					continue;
+				}
+				for (int vetNum = 0; vetNum < 3; ++vetNum) {
+					curPoly->tvlist[vetNum] = curPoly->vlist[vetNum] * cam.mcam;
+				}
 			}
-			else
+		}
+		
+		//透视变换(非矩阵法，这里假设渲染列表的多边形已被变换为相机坐标)
+		void CameraToPerspective(Camera &cam) {
+			for (int poly = 0; poly < numPolys; poly++)
 			{
-				Point3D ptOrigin;//平面上的一个点
-				Vector3D vn; // 面法线
+				// acquire current polygon
+				auto currPoly = polyPtrs[poly];
 
-				//右裁剪面
-				vn = Vector3D{ viewDist,0.0f,-viewPlaneWidth / 2.0f };
-				rtClipPlane = Plane3D{ ptOrigin ,vn,true };
+				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+					(currPoly->state & PloygonStates::kClipped) ||
+					(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly->state & PloygonStates::kBackface))
+					continue; // move onto next poly
 
-				// 左裁剪面，与右裁剪面关于z轴对称
-				vn = Vector3D{ -viewDist,0.0,-viewPlaneWidth / 2.0f };
-				ltClipPlane = Plane3D{ ptOrigin ,vn,true };
+			 // all good, let's transform 
+				for (int vertex = 0; vertex < 3; vertex++)
+				{
+					float z = currPoly->tvlist[vertex].z;
 
-				// 上裁剪面
-				vn = Vector3D{ 0.0f,viewDist,-viewPlaneWidth / 2.0f };
-				tpClipPlane = Plane3D{ ptOrigin ,vn,true };
+					// transform the vertex by the view parameters in the camera
+					currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
+					currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;
 
-				//下裁剪面
-				vn = Vector3D{ 0.0f,-viewDist,-viewPlaneWidth / 2.0f };
-				btClipPlane = Plane3D{ ptOrigin ,vn,true };
-			}
+				} // end for vertex
 
-		} // end Init_CAM4DV1
+			} // end for poly
 
-		//根据欧拉角度计算相机变换矩阵，seq确认旋转顺序（世界坐标到相机坐标变换矩阵）
-		void BuildMatrixEuler(CameraRotSeq seq)
-		{
-			//相机平移矩阵逆矩阵
-			Matrix<float, 4, 4> mtInv{
-				1, 0, 0, 0,
-				0, 1, 0, 0,
-				0, 0, 1, 0,
-				-pos.x, -pos.y, -pos.z, 1 };
+		} // end CameraToPerspective
 
-			Matrix<float, 4, 4>	mtmp;    // 所有逆旋转矩阵积
+		//视口变换
+		void PerspectiveToScreen(Camera &cam) {
+			//渲染列表已完成透视变换并归一化，透视坐标-》屏幕坐标
+			for (int poly = 0; poly < numPolys; poly++){
+				// acquire current polygon
+				auto currPoly = polyPtrs[poly];
 
-			//提取欧拉角度
-			float theta_x = dir.x;
-			float theta_y = dir.y;
-			float theta_z = dir.z;
+				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+					(currPoly->state & PloygonStates::kClipped) ||
+					(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly->state & PloygonStates::kBackface))
+					continue; // move onto next poly
 
-			// compute the sine and cosine of the angle x
-			float cos_theta = cosf(theta_x);  // no change since cos(-x) = cos(x)
-			float sin_theta = -sinf(theta_x); // sin(-x) = -sin(x)
-			// 绕x轴旋转逆矩阵 
-			Matrix<float, 4, 4>	mxInv{
-				1, 0, 0, 0,
-				0, cos_theta, sin_theta, 0,
-				0, -sin_theta, cos_theta, 0,
-				0, 0, 0, 1 };
+				float alpha = (0.5*cam.viewPortWidth - 0.5);
+				float beta = (0.5*cam.viewPortHeight - 0.5);
 
-			// compute the sine and cosine of the angle y
-			cos_theta = cosf(theta_y);  // no change since cos(-x) = cos(x)
-			sin_theta = -sinf(theta_y); // sin(-x) = -sin(x)
-			//绕y轴旋转逆矩阵
-			Matrix<float, 4, 4> myInv{
-				cos_theta, 0, -sin_theta, 0,
-				0, 1, 0, 0,
-				sin_theta, 0, cos_theta, 0,
-				0, 0, 0, 1 };
+				// all good, let's transform 
+				for (int vertex = 0; vertex < 3; vertex++)
+				{//坐标缩放，反转y轴
+					currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
+					currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+				} // end for vertex
 
-			// compute the sine and cosine of the angle z
-			cos_theta = cosf(theta_z);  // no change since cos(-x) = cos(x)
-			sin_theta = -sinf(theta_z); // sin(-x) = -sin(x)
-			// 绕z轴旋转逆矩阵
-			Matrix<float, 4, 4> mzInv{
-				cos_theta, sin_theta, 0, 0,
-				-sin_theta, cos_theta, 0, 0,
-				0, 0, 1, 0,
-				0, 0, 0, 1 };
+			} // end for poly	
+		}
+		
+		  //相机坐标到屏幕坐标转换（直接法）
+		void CameraToScreen(Camera &cam) {
+			for (int poly = 0; poly < numPolys; poly++){
+				// acquire current polygon
+				auto currPoly = polyPtrs[poly];
 
-			// now compute inverse camera rotation sequence
-			switch (seq)
+				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+					(currPoly->state & PloygonStates::kClipped) ||
+					(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly->state & PloygonStates::kBackface))
+					continue; // move onto next poly
+
+				float alpha = (0.5*cam.viewPortWidth - 0.5);
+				float beta = (0.5*cam.viewPortHeight - 0.5);
+
+				// all good, let's transform 
+				for (int vertex = 0; vertex < 3; vertex++){
+					float z = currPoly->tvlist[vertex].z;
+
+					// transform the vertex by the view parameters in the camera
+					currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
+					currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;
+
+					//坐标缩放，反转y轴
+					currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
+					currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+
+				} // end for vertex
+
+			} // end for poly
+
+		} // end 
+		
+		//背面消除
+		void RemoveBackfaces(Camera cam) {
+			// 设置多边形背面状态
+			for (int poly = 0; poly < numPolys; ++poly)
 			{
-			case CameraRotSeq::kSeqXYZ:
-				mtmp = mxInv * myInv * mzInv;
-				break;
-			case CameraRotSeq::kSeqXZY:
-				mtmp = mxInv * mzInv * myInv;
-				break;
-			case CameraRotSeq::kSeqYXZ:
-				mtmp = myInv * mxInv * mzInv;
-				break;
-			case CameraRotSeq::kSeqYZX:
-				mtmp = myInv * mzInv * mxInv;
-				break;
+				// acquire current polygon
+				auto currPoly = polyPtrs[poly];
 
-			case CameraRotSeq::kSeqZXY:
-				mtmp = mzInv * mxInv * myInv;
-				break;
+				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+					(currPoly->state & PloygonStates::kClipped) ||
+					(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly->state & PloygonStates::kBackface))
+					continue; // move onto next poly
 
-			case CameraRotSeq::kSeqZYX:
-				mtmp = mzInv * myInv * mxInv;
-				break;
+				//计算多边形面法线，顶点是按顺时针方向排列
+				auto u = currPoly->tvlist[1] - currPoly->tvlist[0];//p0->p1
+				auto v = currPoly->tvlist[2] - currPoly->tvlist[0];//p0->p2
+				auto n = u.Cross(v);//u x v
 
-			default: break;
-			}
-			// 将平移矩阵乘以旋转矩阵，得到最终变换矩阵
-			mcam = mtInv * mtmp;
+				auto view = cam.pos - currPoly->tvlist[0];//视点指向多边形向量
+
+				// 计算点积
+				float dp = n * view;
+
+				// if the sign is > 0 then visible, 0 = scathing, < 0 invisible
+				if (dp <= 0.0) {
+					currPoly->state = currPoly->state & PloygonStates::kBackface;
+				}
+
+			} // end for poly
+
+		} // end RemoveBackfacesRenderlist
+		
+		//从齐次坐标转为非齐次坐标
+		void ConvertFromHomo4D() {
+			for (int poly = 0; poly < numPolys; poly++)
+			{
+				// acquire current polygon
+				auto currPoly = polyPtrs[poly];
+
+				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
+					(currPoly->state & PloygonStates::kClipped) ||
+					(currPoly->attr  & POLY4DV1_ATTR_2SIDED) ||
+					(currPoly->state & PloygonStates::kBackface))
+					continue; // move onto next poly
+
+			 // all good, let's transform 
+				for (int vertex = 0; vertex < 3; vertex++)
+				{
+					currPoly->tvlist[vertex].DivByW();
+				} // end for vertex
+
+			} // end for poly		
+
 		}
 
-		//根据注视向量n,v,u创建相机变换矩阵
-		void BuildCameraMatrixUVN(CameraUvnMode mode) {
-			// step 1:平移逆矩阵
-			Matrix<float, 4, 4> mtInv{
-					1, 0, 0, 0,
-					0, 1, 0, 0,
-					0, 0, 1, 0,
-					-pos.x, -pos.y, -pos.z, 1 };
 
-			// step 2: 球面模型，计算目标点
-			if (mode == CameraUvnMode::kSpherical)
-			{
-				float phi = DegToRad(dir.x); // elevation
-				float theta = DegToRad( dir.y); // heading
 
-				// compute trig functions once
-				float sin_phi = sinf(phi);
-				float cos_phi = cosf(phi);
-
-				float sin_theta = sinf(theta);
-				float cos_theta = cosf(theta);
-
-				// now compute the target point on a unit sphere x,y,z
-				target.x = -1 * sin_phi*sin_theta;
-				target.y = 1 * cos_phi;
-				target.z = 1 * sin_phi*cos_theta;
-			} // end else
-
-		 // 计算 u,v,n
-		 // Step 1: n = <target position - view reference point>
-			n = target - pos;
-
-			// Step 2: Let v = <0,1,0>
-			v = Vector4D{ 0.f, 1.f, 0.f ,1.f };
-
-			// Step 3: u = (v x n)
-			u = v.Cross(n);
-
-			// Step 4: v = (n x u)
-			v = n.Cross(u);
-
-			// Step 5: 归一化
-			u.Normalize();
-			v.Normalize();
-			n.Normalize();
-
-			Matrix<float, 4, 4> mtUvn = {
-				u.x, v.x, n.x, 0,
-				u.y, v.y, n.y, 0,
-				u.z, v.z,n.z, 0,
-				0, 0, 0, 1 };
-			// 相机变换矩阵
-			mcam = mtInv * mtUvn;
-		}
 	};
-	std::ostream & operator <<(std::ostream &out, const Object &obj);
-	bool operator ==(const Object&a, const Object&b);
-	void WorldToCamera(Object &obj, Camera &cam);
-	void WorldToCamera(RenderList &rdList, Camera &cam);
-	bool CullObject(Object &obj, Camera &cam, CullType cullflags);
-	void ResetOjbectState(Object &obj);
-	Matrix<float, 4, 4> BuildCameraToPerspectiveMtri(Camera &cam);
+	
+	inline std::ostream & operator <<(std::ostream &out, const Object &obj) {
+		std::cout << "id:" << obj.id << std::endl;
+		std::cout << "name:" << obj.name << std::endl;
+		std::cout << "state:" << std::hex << obj.state << std::endl;
+		std::cout << "attr:" << std::hex << obj.attr << std::endl;
+		std::cout << "avgRadius:" << obj.avgRadius << std::endl;
+		std::cout << "avgRadius:" << obj.maxRadius << std::endl;
+		std::cout << "dir:" << obj.dir.x << " " << obj.dir.y << " " << obj.dir.z << " " << obj.dir.w << std::endl;
+		std::cout << "worldPos:" << obj.worldPos.x << " " << obj.worldPos.y << " " << obj.worldPos.z << " " << obj.worldPos.w << std::endl;
+		std::cout << "ux:" << obj.ux.x << " " << obj.ux.y << " " << obj.ux.z << " " << obj.ux.w << std::endl;
+		std::cout << "uz:" << obj.uz.x << " " << obj.uz.y << " " << obj.uz.z << " " << obj.uz.w << std::endl;
+		std::cout << "uy:" << obj.uy.x << " " << obj.uy.y << " " << obj.uy.z << " " << obj.uy.w << std::endl;
+		std::cout << "***********************************************" << std::endl;
+		std::cout << "numVertices:" << obj.numVertices << std::endl;
+		for (int i = 0; i < obj.numVertices; ++i) {
+			auto v = obj.vlistLocal[i];
+			std::cout << i << " vlistLocal:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
+		}
+		std::cout << "***********************************************" << std::endl;
+		for (int i = 0; i < obj.numVertices; ++i) {
+			auto v = obj.vlistTransl[i];
+			std::cout << i << " vlistTransl:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
+		}
+
+		std::cout << "***********************************************" << std::endl;
+		std::cout << "numPolygons:" << obj.numPolygons << std::endl;
+		for (int i = 0; i < obj.numPolygons; ++i) {
+			auto v = obj.plist[i];
+			std::cout << i << " Polygon:" << "state|" << std::hex << v.state << " attr|" << std::hex << v.state << " color|" << v.color;
+			std::cout << " index:" << v.vert[0] << " " << v.vert[1] << " " << v.vert[2] << std::endl;
+		}
+		std::cout << "***********************************************" << std::endl;
+
+		return out;
+	}
+
+	inline bool operator ==(const Object&a, const Object&b) {
+		if (&a == &b) {
+			return true;
+		}
+		bool flag = true;
+		flag = (a.numPolygons == b.numPolygons) &&
+			(a.numVertices == b.numVertices) &&
+			(a.state == b.state) &&
+			(a.attr == b.attr) &&
+			(fabs(a.avgRadius - b.avgRadius) < EPSILON_E5) &&
+			(fabs(a.maxRadius - b.maxRadius) < EPSILON_E5) &&
+			(a.ux == b.ux) &&
+			(a.uy == b.uy) &&
+			(a.uz == b.uz) &&
+			(a.worldPos == b.worldPos) &&
+			(a.dir == b.dir);
+		if (!flag) {
+			return flag;
+		}
+		else {
+			for (int i = 0; i < a.numVertices; ++i) {
+				if (a.vlistLocal[i] == b.vlistLocal[i] && a.vlistTransl[i] == b.vlistTransl[i]) {
+					continue;
+				}
+				else {
+					return false;
+				}
+
+			}
+		}
+		return flag;
+	}
 }
