@@ -296,4 +296,27 @@ namespace maki {
 		obj1.TransfromToWorldMat(TransfromType::kLocalToTrans,false);
 		assert((obj == obj1));
 	}
+
+	void TestDrawLine() {
+		Vector4D pt1 = { 1,1,0,0 };
+		Vector4D pt2 = { 30,30,0,0 };
+		auto total = screenWidth * screenHeight;
+		uchar *dest_buffer = new uchar[total * 4];
+		auto begin =(int *) dest_buffer;
+		DrawClipLine(pt1, pt2, 66, dest_buffer, screenWidth * 4);
+		for (int i = 0; i < total; ++i) {
+			auto c = * begin;
+			if (c == 66) {
+				cout << "X";
+			}
+			else {
+				cout << "o";
+			}
+			if (i%screenWidth == 0) {
+				cout << endl;
+			}
+			begin += 1;
+		}
+		delete[]dest_buffer;
+	}
 }

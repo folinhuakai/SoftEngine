@@ -12,6 +12,7 @@
 #include "Test.h"
 #include <windows.h>
 
+
 using namespace std;
 using namespace maki;
 
@@ -25,13 +26,14 @@ std::string workingdir()
 
 int main()
 {
-	TestVector2D();
+	/*TestVector2D();
 	TestVector3D();
 	TestVector4D();
 	TestQuat();
 	TestCoordinate();
 	TestParmLine();
-	TestLoadObject();
+	TestLoadObject();*/
+	TestDrawLine();
 	return 0;
 }
 

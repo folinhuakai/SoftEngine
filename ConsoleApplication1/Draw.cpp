@@ -1,7 +1,9 @@
 #include "VectorXD.h"
 #include<windows.h>
+#include "Draw.h"
 namespace maki {
-	using uchar = unsigned char;
+	int screenWidth = 50;
+	int screenHeight = 50;
 	// 线段2D裁剪
 	bool ClipLine(Vector4D &pt1,Vector4D &pt2, int maxClip_x,int maxClip_y,int minClip_x = 0, int minClip_y = 0) {
 		// 参考https://blog.csdn.net/cppyin/article/details/6172457
@@ -261,6 +263,7 @@ namespace maki {
 		return true;
 
 	} // end Clip_Line
+
 	//画线 Bresenham算法参考 ：https://blog.csdn.net/Jurbo/article/details/52653276 https://zhuanlan.zhihu.com/p/20213658 
 	int DrawLine(Vector4D &start, Vector4D &end,int color, uchar *framePtr, int lpitch) {//framePtr帧缓存起始地址，lpitch每行像素
 		
@@ -280,12 +283,12 @@ namespace maki {
 		// test which direction the line is going in i.e. slope angle
 		if (dx >= 0)
 		{
-			x_inc = 1;
+			x_inc = 4;
 
 		} // end if line is moving right
 		else
 		{
-			x_inc = -1;
+			x_inc = -4;
 			dx = -dx;  // need absolute value
 
 		} // end else moving left
@@ -316,8 +319,7 @@ namespace maki {
 			for (index = 0; index <= dx; index++)
 			{
 				// set the pixel
-				*framePtr = color;
-
+				*(int *)framePtr = color;
 				// test if error has overflowed
 				if (error >= 0)
 				{
@@ -346,8 +348,7 @@ namespace maki {
 			for (index = 0; index <= dy; index++)
 			{
 				// set the pixel
-				*framePtr = color;
-
+				*(int *)framePtr = color;
 				// test if error overflowed
 				if (error >= 0)
 				{
@@ -372,5 +373,17 @@ namespace maki {
 		return true;
 
 	} // end Draw_Line
+
+	// 结合2d裁剪，画线
+	void DrawClipLine(const Vector4D &pt1, const Vector4D &pt2, int color,uchar *dest_buffer, int lpitch){
+		Vector4D tPt1 = pt1;
+		Vector4D tPt2 = pt2;
+		// clip the line
+		if (ClipLine(tPt1, tPt2, screenWidth, screenHeight))
+			DrawLine(tPt1, tPt2, color, dest_buffer, lpitch);
+
+	} // end Draw_Clip_Line16
+
+
 
 }
