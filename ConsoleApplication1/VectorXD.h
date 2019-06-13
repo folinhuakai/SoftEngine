@@ -121,6 +121,7 @@ namespace maki {
 		}
 		float x, y, z;
 		static const Vector3D zero;
+		static const Vector3D one;
 	};
 
 

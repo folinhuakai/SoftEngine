@@ -298,21 +298,22 @@ namespace maki {
 	}
 
 	void TestDrawLine() {
-		Vector4D pt1 = { 1,1,0,0 };
-		Vector4D pt2 = { 30,30,0,0 };
+		Vector4D pt1 = { 0.5,0.6,0,0 };
+		Vector4D pt2 = { 21,300,0,0 };
 		auto total = screenWidth * screenHeight;
 		uchar *dest_buffer = new uchar[total * 4];
+		memset(dest_buffer, 0, sizeof(char) * total *4);
 		auto begin =(int *) dest_buffer;
-		DrawClipLine(pt1, pt2, 66, dest_buffer, screenWidth * 4);
+		DrawClipLine(pt1, pt2, 1, dest_buffer, screenWidth * 4);
 		for (int i = 0; i < total; ++i) {
 			auto c = * begin;
-			if (c == 66) {
+			if (c == 1) {
 				cout << "X";
 			}
 			else {
 				cout << "o";
 			}
-			if (i%screenWidth == 0) {
+			if ((i+1)%screenWidth == 0 and i!= 0) {
 				cout << endl;
 			}
 			begin += 1;

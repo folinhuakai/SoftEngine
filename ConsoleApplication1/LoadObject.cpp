@@ -1,5 +1,8 @@
 #include "LoadObject.h"
 #include<fstream>
+
+#include <functional>
+#include <algorithm>
 namespace maki {
 	// 位掩码
 	constexpr auto PLX_SHADE_MODE_MASK = 0x6000;//抽取着色模式掩码
@@ -20,6 +23,9 @@ namespace maki {
 		while (!fp.eof())
 		{
 			std::getline(fp, out);
+			out.erase(out.begin(), std::find_if(out.begin(), out.end(),
+				std::not1(std::ptr_fun(::isspace))));//去除头尾空白字符
+
 			// test if this was a blank line or a comment
 			if (out == "" || out[0] == '#')
 				continue;

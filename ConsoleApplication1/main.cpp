@@ -32,8 +32,8 @@ int main()
 	TestQuat();
 	TestCoordinate();
 	TestParmLine();
-	TestLoadObject();*/
-	TestDrawLine();
+	TestLoadObject();
+	TestDrawLine();*/
 	return 0;
 }
 
