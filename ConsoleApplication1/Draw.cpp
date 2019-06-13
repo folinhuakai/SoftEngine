@@ -1,6 +1,7 @@
 #include "VectorXD.h"
 #include<windows.h>
 #include "Draw.h"
+#include "Math.h"
 namespace maki {
 	int screenWidth = 20;
 	int screenHeight = 20;
@@ -8,7 +9,7 @@ namespace maki {
 	int maxClip_y = screenHeight - 1;
 	int minClip_x = 0;
 	int minClip_y = 0;
-	int byteStep = 3;
+	int byteStep = 4;
 
 	void PrintTest(int *begin, int total,int color) {
 		std::cout << std::endl;
@@ -414,13 +415,6 @@ namespace maki {
 
 	} // end DrawClipLine
 
-	void DrawLineHorizontal(float xs,float xe,uchar *destAddr,int color) {
-		int start = (int)(xs + 0.5);
-		int end = (int)(xe + 0.5);
-		for (; start < end; ++start, destAddr += byteStep) {
-			*(int *)destAddr = color;
-		}
-	}
 
 	// 平顶三角形
 	bool DrawTopTri(float x1, float y1,//顶点1,2,3需要遵从一定是顺序
@@ -429,6 +423,9 @@ namespace maki {
 		int color,
 		uchar *framePtr, int lpitch)
 	{
+		// test for degenerate
+		if (fabs(y1 - y3) < EPSILON_E5 || fabs(y2 - y3) < EPSILON_E5)
+			return false;
 		// destination address of next scanline
 		uchar  *destAddr = framePtr;
 
@@ -442,9 +439,6 @@ namespace maki {
 
 	 // compute delta's
 		float height = y3 - y1;
-		if (fabs(height) < 0.00001) {
-			return false;
-		}
 		float dx_left = (x3 - x1) / height;
 		float dx_right = (x3 - x2) / height;
 
@@ -453,7 +447,7 @@ namespace maki {
 		float xe = x2;
 
 		// perform y clipping
-		if (y1 < minClip_x)
+		if (y1 < minClip_y)
 		{
 			// compute new xs and ys
 			xs = xs + dx_left * (-y1 + minClip_y);
@@ -469,19 +463,20 @@ namespace maki {
 		// compute starting address in video memory
 		destAddr = destAddr + (int)(y1+0.5) * lpitch;
 
-		int max_y = (int)(y3 + 0.5);
+		int max_y = y3;
 		// test if x clipping is needed
-		if (x1 >= minClip_x && x1 <= maxClip_x &&
-			x2 >= minClip_x && x2 <= maxClip_x &&
-			x3 >= minClip_x && x3 <= maxClip_x)
+		if (int(x1 +1)>= minClip_x && int(x1 + 1) <= maxClip_x &&
+			int(x2 + 1) >= minClip_x && int(x2 + 1) <= maxClip_x &&
+			int(x3 + 1) >= minClip_x && int(x3 + 1) <= maxClip_x)
 		{
 			// draw the triangle
 			for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
 			{
-				memset(destAddr + (unsigned int)xs, color, (unsigned int)((int)xe - (int)xs + 1));
+				
+				DrawLineHorizontal((xs +0.5), (xe+0.5), destAddr, color);
 				
 				// adjust starting point and ending point
-				xs += dx_left;
+				xs += dx_left ;
 				xe += dx_right;
 
 			} // end for
@@ -493,12 +488,12 @@ namespace maki {
 			for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
 			{
 				// do x clip
-				int left = (int)xs;
-				int right = (int)xe;
+				int left = (int)(xs + 0.5);
+				int right = (int)(xe + 0.5);
 
 				// adjust starting point and ending point
-				xs += dx_left;
-				xe += dx_right;
+				xs += (dx_left );
+				xe += (dx_right);
 
 				// clip line
 				if (left < minClip_x)
@@ -517,12 +512,119 @@ namespace maki {
 						continue;
 				}
 
-				memset(destAddr + (unsigned int)left, color, (unsigned int)(right - left + 1));
+				DrawLineHorizontal(left, right, destAddr, color);
 
 			} // end for
 
 		} // end else x clipping needed
 		return true;
 	} // end Draw_Top_Tri
+
+	// 平底三角形
+		bool DrawBottomTri(int x1, float y1,//顶点1,2,3需要遵从一定是顺序
+			float x2, float y2,
+			float x3, float y3,
+			int color,
+			uchar *framePtr, int lpitch)
+		{
+			if (fabs(y1 - y2) < EPSILON_E5 || fabs(y1 - y3) < EPSILON_E5)
+				return false;
+
+			uchar  *destAddr = framePtr;
+
+			// test order of x1 and x2
+			if (x3 < x2)
+			{
+				float temp_x = x2;
+				x2 = x3;
+				x3 = temp_x;
+
+			} // end if swap
+
+		 // compute delta's
+			float height = y3 - y1;
+
+			float dx_left = (x2 - x1) / height;
+			float dx_right = (x3 - x1) / height;
+
+			// set starting points
+			float xs = x1;
+			float xe = x1;
+
+			// perform y clipping
+			if (int(y1) < minClip_y)
+			{
+				// compute new xs and ys
+				xs = xs + dx_left * (-y1 + minClip_y);
+				xe = xe + dx_right * (-y1 + minClip_y);
+				// reset y1
+				y1 = minClip_y;
+
+			} // end if top is off screen
+
+			if (int (y3) > maxClip_y)
+				y3 = maxClip_y;
+
+			// compute starting address in video memory
+			destAddr = destAddr + (int)(y1 + 0.5) * lpitch;
+
+			int max_y = y3;
+
+			// test if x clipping is needed
+			if (int(x1 + 1) >= minClip_x && int(x1 + 1) <= maxClip_x &&
+				int(x2 + 1) >= minClip_x && int(x2 + 1) <= maxClip_x &&
+				int(x3 + 1) >= minClip_x && int(x3 + 1) <= maxClip_x)
+			{
+				// draw the triangle
+				for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+				{
+
+					DrawLineHorizontal((xs + 0.5), (xe + 0.5), destAddr, color);
+
+					// adjust starting point and ending point
+					xs += dx_left;
+					xe += dx_right;
+
+				} // end for
+
+			} // end if no x clipping needed
+			else
+			{
+				// clip x axis with slower version
+				for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+				{
+					// do x clip
+					int left = (int)(xs + 0.5);
+					int right = (int)(xe + 0.5);
+
+					// adjust starting point and ending point
+					xs += (dx_left);
+					xe += (dx_right);
+
+					// clip line
+					if (left < minClip_x)
+					{
+						left = minClip_x;
+
+						if (right < minClip_x)
+							continue;
+					}
+
+					if (right > maxClip_x)
+					{
+						right = maxClip_x;
+
+						if (left > maxClip_x)
+							continue;
+					}
+
+					DrawLineHorizontal(left, right, destAddr, color);
+
+				} // end for
+
+			} // end else x clipping needed
+			return true;
+
+		} // end Draw_Bottom_TriFP
 
 }

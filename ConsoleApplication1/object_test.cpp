@@ -139,22 +139,22 @@ TEST_CASE("渲染流水线 Test") {
 
 TEST_CASE("基本图元测试") {
 	auto total = screenWidth * screenHeight;
-	uchar *dest_buffer = new uchar[total * 4];
-	memset(dest_buffer, 0, sizeof(char) * total * 4);
+	uchar *dest_buffer = new uchar[total * byteStep];
+	memset(dest_buffer, 0, sizeof(char) * total * byteStep);
 	auto begin = (int *)dest_buffer;
 	int color = 1;
 	SECTION("画线") {
 		Vector4D pt1 = { 0.5,0.6,0,0 };
 		Vector4D pt2 = { 21,300,0,0 };
-		//DrawClipLine(pt1, pt2, color, dest_buffer, screenWidth * 4);
+		DrawClipLine(pt1, pt2, color, dest_buffer, screenWidth * byteStep);
 		PrintTest(begin, total, color);
 		delete[]dest_buffer;
 	}
 	SECTION("画三角形") {
-		Vector4D pt1 = { 1,1,0,0 };
-		Vector4D pt2 = { 10,1,0,0 };
-		Vector4D pt3 = { 5,10,0,0 };
-		DrawTopTri(pt1.x,pt1.y, pt2.x,pt2.y,pt3.x,pt3.y, color, dest_buffer, screenWidth);
+		Vector4D pt1 = {10,1,0,0 };
+		Vector4D pt2 = { -2,15,0,0 };
+		Vector4D pt3 = { 7,15,0,0 };
+		DrawBottomTri(pt1.x, pt1.y, pt2.x, pt2.y, pt3.x, pt3.y, color, dest_buffer, screenWidth*byteStep);
 		PrintTest(begin, total, color);
 		delete[]dest_buffer;
 	}
