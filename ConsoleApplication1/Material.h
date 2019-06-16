@@ -4,6 +4,7 @@
 namespace maki {
 	using uchar = unsigned char;
 	class BitMap {
+	public:
 		int state;          // state of bitmap
 		int attr;           // attributes of bitmap
 		int x, y;            // position of bitmap
@@ -13,6 +14,7 @@ namespace maki {
 		uchar *buffer;      // pixels of bitmap
 	};
 	class Material {
+	public:
 		int state;           // ²ÄÖÊ×´Ì¬
 		int id;              
 		std::string name;    // Ãû³Æ
