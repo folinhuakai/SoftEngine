@@ -417,14 +417,14 @@ namespace maki {
 
 
 	// 平顶三角形
-	bool DrawTopTri(float x1, float y1,//顶点1,2,3需要遵从一定是顺序
-		float x2, float y2,
-		float x3, float y3,
+	bool DrawTopTri(int x1, int y1,//顶点1,2,3需要遵从一定是顺序
+		int x2, int y2,
+		int x3, int y3,
 		int color,
 		uchar *framePtr, int lpitch)
 	{
 		// test for degenerate
-		if (fabs(y1 - y3) < EPSILON_E5 || fabs(y2 - y3) < EPSILON_E5)
+		if (y1==y3 || y2==y3)
 			return false;
 		// destination address of next scanline
 		uchar  *destAddr = framePtr;
@@ -432,7 +432,7 @@ namespace maki {
 		// test order of x1 and x2
 		if (x2 < x1)
 		{
-			float temp_x = x2;
+			int temp_x = x2;
 			x2 = x1;
 			x1 = temp_x;
 		} // end if swap
@@ -443,15 +443,15 @@ namespace maki {
 		float dx_right = (x3 - x2) / height;
 
 		// set starting points
-		float xs = x1;
-		float xe = x2;
+		float xs = (float) x1;
+		float xe = (float) x2;
 
 		// perform y clipping
 		if (y1 < minClip_y)
 		{
 			// compute new xs and ys
-			xs = xs + dx_left * (-y1 + minClip_y);
-			xe = xe + dx_right * (-y1 + minClip_y);
+			xs = xs + dx_left * (float)(-y1 + minClip_y);
+			xe = xe + dx_right * (float)(-y1 + minClip_y);
 			// reset y1
 			y1 = minClip_y;
 
@@ -461,22 +461,21 @@ namespace maki {
 			y3 = maxClip_y;
 
 		// compute starting address in video memory
-		destAddr = destAddr + (int)(y1+0.5) * lpitch;
+		destAddr = destAddr + y1 * lpitch;
 
-		int max_y = y3;
 		// test if x clipping is needed
-		if (int(x1 +1)>= minClip_x && int(x1 + 1) <= maxClip_x &&
-			int(x2 + 1) >= minClip_x && int(x2 + 1) <= maxClip_x &&
-			int(x3 + 1) >= minClip_x && int(x3 + 1) <= maxClip_x)
+		if (x1 + 1 >= minClip_x && x1 + 1 <= maxClip_x &&
+			x2 + 1 >= minClip_x && x2 + 1 <= maxClip_x &&
+			x3 + 1 >= minClip_x && x3 + 1 <= maxClip_x)
 		{
 			// draw the triangle
-			for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+			for (int temp_y = y1; temp_y <= y3; ++temp_y, destAddr += lpitch)
 			{
-				
-				DrawLineHorizontal((xs +0.5), (xe+0.5), destAddr, color);
-				
+
+				DrawLineHorizontal(xs + 0.5, xe + 0.5, destAddr, color);
+
 				// adjust starting point and ending point
-				xs += dx_left ;
+				xs += dx_left;
 				xe += dx_right;
 
 			} // end for
@@ -485,14 +484,14 @@ namespace maki {
 		else
 		{
 			// clip x axis with slower version
-			for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+			for (int temp_y = y1; temp_y <= y3; ++temp_y, destAddr += lpitch)
 			{
 				// do x clip
 				int left = (int)(xs + 0.5);
 				int right = (int)(xe + 0.5);
 
 				// adjust starting point and ending point
-				xs += (dx_left );
+				xs += (dx_left);
 				xe += (dx_right);
 
 				// clip line
@@ -521,13 +520,8 @@ namespace maki {
 	} // end Draw_Top_Tri
 
 	// 平底三角形
-		bool DrawBottomTri(int x1, float y1,//顶点1,2,3需要遵从一定是顺序
-			float x2, float y2,
-			float x3, float y3,
-			int color,
-			uchar *framePtr, int lpitch)
-		{
-			if (fabs(y1 - y2) < EPSILON_E5 || fabs(y1 - y3) < EPSILON_E5)
+	bool DrawBottomTri(int x1, int y1, int x2, int y2, int x3, int y3, int color, uchar *framePtr, int lpitch) {
+			if (y1 == y2 || y1 == y3)
 				return false;
 
 			uchar  *destAddr = framePtr;
@@ -535,7 +529,7 @@ namespace maki {
 			// test order of x1 and x2
 			if (x3 < x2)
 			{
-				float temp_x = x2;
+				int temp_x = x2;
 				x2 = x3;
 				x3 = temp_x;
 
@@ -552,7 +546,7 @@ namespace maki {
 			float xe = x1;
 
 			// perform y clipping
-			if (int(y1) < minClip_y)
+			if (y1 < minClip_y)
 			{
 				// compute new xs and ys
 				xs = xs + dx_left * (-y1 + minClip_y);
@@ -562,24 +556,21 @@ namespace maki {
 
 			} // end if top is off screen
 
-			if (int (y3) > maxClip_y)
+			if (y3 > maxClip_y)
 				y3 = maxClip_y;
 
 			// compute starting address in video memory
-			destAddr = destAddr + (int)(y1 + 0.5) * lpitch;
-
-			int max_y = y3;
-
+			destAddr = destAddr + y1 * lpitch;
 			// test if x clipping is needed
-			if (int(x1 + 1) >= minClip_x && int(x1 + 1) <= maxClip_x &&
-				int(x2 + 1) >= minClip_x && int(x2 + 1) <= maxClip_x &&
-				int(x3 + 1) >= minClip_x && int(x3 + 1) <= maxClip_x)
+			if (x1 + 1 >= minClip_x && x1 + 1 <= maxClip_x &&
+				x2 + 1 >= minClip_x && x2 + 1 <= maxClip_x &&
+				x3 + 1 >= minClip_x && x3 + 1 <= maxClip_x)
 			{
 				// draw the triangle
-				for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+				for (int temp_y = y1; temp_y <= y3; ++temp_y, destAddr += lpitch)
 				{
 
-					DrawLineHorizontal((xs + 0.5), (xe + 0.5), destAddr, color);
+					DrawLineHorizontal(xs + 0.5, xe + 0.5, destAddr, color);
 
 					// adjust starting point and ending point
 					xs += dx_left;
@@ -591,7 +582,7 @@ namespace maki {
 			else
 			{
 				// clip x axis with slower version
-				for (int temp_y = y1; temp_y <= max_y; ++temp_y, destAddr += lpitch)
+				for (int temp_y = y1; temp_y <= y3; ++temp_y, destAddr += lpitch)
 				{
 					// do x clip
 					int left = (int)(xs + 0.5);
@@ -627,4 +618,83 @@ namespace maki {
 
 		} // end Draw_Bottom_TriFP
 
+	// 任意形状三角形
+	bool DrawTriangle(const Vector4D &pt1, const Vector4D &pt2, const Vector4D &pt3,int color,uchar *dest_buffer, int lpitch){
+		int x1 = pt1.x +0.5;
+		int y1 = pt1.y + 0.5;
+		int x2 = pt2.x + 0.5;
+		int y2 = pt2.y + 0.5;
+		int x3 = pt3.x + 0.5;
+		int y3 = pt3.y + 0.5;
+
+		// test for h lines and v lines
+		if ((x1 == x2 && x2 == x3) || (y1 == y2 && y2 == y3))
+			return false;
+
+		int temp_x, temp_y;
+		// sort p1,p2,p3 in ascending y order
+		if (y2 < y1)
+		{
+			temp_x = x2;
+			temp_y = y2;
+			x2 = x1;
+			y2 = y1;
+			x1 = temp_x;
+			y1 = temp_y;
+		} 
+
+		if (y3 < y1)
+		{
+			temp_x = x3;
+			temp_y = y3;
+			x3 = x1;
+			y3 = y1;
+			x1 = temp_x;
+			y1 = temp_y;
+		} 
+
+		if (y3 < y2)
+		{
+			temp_x = x3;
+			temp_y = y3;
+			x3 = x2;
+			y3 = y2;
+			x2 = temp_x;
+			y2 = temp_y;
+
+		} // end if
+
+		 // do trivial rejection tests for clipping
+		if (y3<minClip_y || y1>maxClip_y ||
+			(x1 < minClip_x && x2 < minClip_x && x3 < minClip_x) ||
+			(x1 > maxClip_x && x2 > maxClip_x && x3 > maxClip_x))
+			return false;
+
+		// test if top of triangle is flat
+		if (y1 == y2)
+		{
+			return DrawTopTri(x1, y1, x2, y2, x3, y3, color, dest_buffer, lpitch);
+		} // end if
+		else
+			if (y2 == y3)
+			{
+				return DrawBottomTri(x1, y1, x2, y2, x3, y3, color, dest_buffer, lpitch);
+			} // end if bottom is flat
+			else
+			{
+				// general triangle that's needs to be broken up along long edge
+				int new_x = x1 + (int)(0.5 + (float)(y2 - y1)*(float)(x3 - x1) / (float)(y3 - y1));
+
+				// draw each sub-triangle
+				bool isTrue = DrawBottomTri(x1, y1, new_x, y2, x2, y2, color, dest_buffer, lpitch);
+				if (isTrue) {
+					return DrawTopTri(x2, y2, new_x, y2, x3, y3, color, dest_buffer, lpitch);
+				}
+				else {
+					return false;
+				}
+				
+			} 
+
+	} // end
 }

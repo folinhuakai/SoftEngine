@@ -152,6 +152,7 @@
     <ClInclude Include="Draw.h" />
     <ClInclude Include="LoadObject.h" />
     <ClInclude Include="main_switch.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Object.h" />

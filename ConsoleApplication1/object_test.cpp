@@ -150,11 +150,27 @@ TEST_CASE("基本图元测试") {
 		PrintTest(begin, total, color);
 		delete[]dest_buffer;
 	}
-	SECTION("画三角形") {
+	SECTION("画平顶三角形") {
+		Vector4D pt1 = { 1,1,0,0 };
+		Vector4D pt2 = { 10,1,0,0 };
+		Vector4D pt3 = { 3,15,0,0 };
+		DrawTopTri(pt1.x, pt1.y, pt2.x, pt2.y, pt3.x, pt3.y, color, dest_buffer, screenWidth*byteStep);
+		//PrintTest(begin, total, color);
+		delete[]dest_buffer;
+	}
+	SECTION("画平底三角形") {
 		Vector4D pt1 = {10,1,0,0 };
 		Vector4D pt2 = { -2,15,0,0 };
 		Vector4D pt3 = { 7,15,0,0 };
 		DrawBottomTri(pt1.x, pt1.y, pt2.x, pt2.y, pt3.x, pt3.y, color, dest_buffer, screenWidth*byteStep);
+		//PrintTest(begin, total, color);
+		delete[]dest_buffer;
+	}
+	SECTION("画任意三角形") {
+		Vector4D pt1 = {10,1,0,0 };
+		Vector4D pt2 = { 2,8,0,0 };
+		Vector4D pt3 = { 7,15,0,0 };
+		DrawTriangle(pt1, pt2,pt3, color, dest_buffer, screenWidth*byteStep);
 		PrintTest(begin, total, color);
 		delete[]dest_buffer;
 	}
