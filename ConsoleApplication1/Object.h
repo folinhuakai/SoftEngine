@@ -3,9 +3,10 @@
 #include <string>
 #include "Math.h"
 #include "Light.h"
+#include <algorithm>
 
 
-namespace maki{
+namespace maki{		
 	constexpr auto MAX_VERTICES = 128; //物体最大顶点数
 	constexpr auto MAX_POLYS = 128;//物体最大多边形数
 	constexpr auto MAX_RENDER_POLYGON = 128;//渲染列表最大多边形数
@@ -18,6 +19,12 @@ namespace maki{
 	constexpr auto POLY4DV1_ATTR_8BITCOLOR = 0x0004;
 	constexpr auto POLY4DV1_ATTR_RGB16 = 0x0008;
 	constexpr auto POLY4DV1_ATTR_RGB24 = 0x0010;
+
+	enum class SortType {
+		kAvgZ,
+		kMinZ,
+		kMaxZ,
+	};
 
 	//着色模式
 	enum PloygonShadeMode {
@@ -65,6 +72,7 @@ namespace maki{
 		int state{ PloygonStates::kInit };//状态
 		int attr{ 0 };//物理属性
 		int color{ 0 };//颜色
+		int tColor{ 0 };//颜色
 		Point4D *vlist{};//顶点列表
 		int vert[3];//顶点列表中元素索引
 	};
@@ -312,7 +320,8 @@ namespace maki{
 		}
 
 		//光照计算
-		bool LightInWorld(Camera &cam,const std::vector<Light>  &lights){
+		bool LightInWorld(Camera &cam,
+			const std::vector<Light> lights){
 			//根据光源列表和相机对物体执行光照计算，支持固定着色和恒定着色
 			unsigned int r_base, g_base, b_base,  // 初始颜色
 				r_sum, g_sum, b_sum,   // 全部光照
@@ -331,8 +340,7 @@ namespace maki{
 				return false;
 
 			// process each poly in mesh
-			for (int poly = 0; poly < numPolygons; poly++)
-			{
+			for (int poly = 0; poly < numPolygons; poly++){
 				// acquire polygon
 				auto currPoly = plist[poly];
 
@@ -348,8 +356,7 @@ namespace maki{
 				int vindex_2 = currPoly.vert[2];
 
 				// test the lighting mode of the polygon (use flat for flat, gouraud))
-				if (currPoly.attr & PloygonShadeMode::kFlat || currPoly.attr & PloygonShadeMode::kGouraud)
-				{
+				if (currPoly.attr & PloygonShadeMode::kFlat || currPoly.attr & PloygonShadeMode::kGouraud){//恒定着色、Gouraud
 					RGB_FROM32BIT(currPoly.color, &r_base, &g_base, &b_base);
 					// initialize color sum
 					r_sum = 0;
@@ -466,91 +473,133 @@ namespace maki{
 							// only add light if dp > 0
 							if (dp > 0){
 								// 顶点到光源向量
-								Vector4D s = lights[currLight].pos - vlistTransl[vindex_0];
+								Vector4D s = vlistTransl[vindex_0]  - lights[currLight].pos;
 								dist = s.Length();
 
-								// compute spot light term (s . l)
-								float dpsl = VECTOR4D_Dot(&s, &lights[curr_light].dir) / dist;
+								// 余弦值
+								float dpsl = s * lights[currLight].dir / dist;
 
 								// proceed only if term is positive
 								if (dpsl > 0)
 								{
 									// compute attenuation
-									atten = (lights[curr_light].kc + lights[curr_light].kl*dist + lights[curr_light].kq*dist*dist);
-
-									// for speed reasons, pf exponents that are less that 1.0 are out of the question, and exponents
-									// must be integral
+									atten = (lights[currLight].kc + lights[currLight].kl*dist + lights[currLight].kq*dist*dist);
 									float dpsl_exp = dpsl;
 
 									// exponentiate for positive integral powers
-									for (int e_index = 1; e_index < (int)lights[curr_light].pf; e_index++)
+									for (int e_index = 1; e_index < (int)lights[currLight].pf; e_index++)
 										dpsl_exp *= dpsl;
 
 									// now dpsl_exp holds (dpsl)^pf power which is of course (s . l)^pf 
 
 									i = 128 * dp * dpsl_exp / (nl * atten);
 
-									r_sum += (lights[curr_light].c_diffuse.r * r_base * i) / (256 * 128);
-									g_sum += (lights[curr_light].c_diffuse.g * g_base * i) / (256 * 128);
-									b_sum += (lights[curr_light].c_diffuse.b * b_base * i) / (256 * 128);
+									r_sum += (lights[currLight].c_diffuse.r * r_base * i) / (256 * 128);
+									g_sum += (lights[currLight].c_diffuse.g * g_base * i) / (256 * 128);
+									b_sum += (lights[currLight].c_diffuse.b * b_base * i) / (256 * 128);
 
-								} // end if
+								} 
 
-							} // end if
+							} 
 
-						} // end if spot light	
-									
+						}									
 
 					} // end for light
 
-				// make sure colors aren't out of range
+				// 确保颜色不会溢出
 					if (r_sum > 255) r_sum = 255;
 					if (g_sum > 255) g_sum = 255;
 					if (b_sum > 255) b_sum = 255;
 
 					// write the color
-					shaded_color = RGB16Bit(r_sum, g_sum, b_sum);
-					curr_poly->color = (int)((shaded_color << 16) | curr_poly->color);
+					shaded_color = RGBA32BIT(r_sum, g_sum, b_sum,255);
+					currPoly.tColor = shaded_color;
 
 				} // end if
-				else // assume POLY4DV1_ATTR_SHADE_MODE_CONSTANT
-				{
-					// emmisive shading only, copy base color into upper 16-bits
-					// without any change
-					curr_poly->color = (int)((curr_poly->color << 16) | curr_poly->color);
+				else {
+				// 固定着色
+				currPoly.tColor = currPoly.color;
 				} // end if
 
 			} // end for poly
 
 		// return success
-			return(1);
+			return true;
 
-		} // end Light_OBJECT4DV1_World16
+		} // end 
 	};
 
 
 	/************************主多边形列表*************************************/
+	// 根据z最小值排序
+	inline bool CompareNearZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+		float z1, z2;
+		// dereference the poly pointers
+		auto poly_1 = *arg1;
+		auto poly_2 = *arg2;
+
+		// compute the near z of each polygon
+		z1 = std::fmin(poly_1.tvlist[0].z, poly_1.tvlist[1].z);
+		z1 = std::fmin(z1, poly_1.tvlist[2].z);
+
+		z2 = std::fmin(poly_2.tvlist[0].z, poly_2.tvlist[1].z);
+		z2 = std::fmin(z2, poly_2.tvlist[2].z);
+
+		// compare z1 and z2, such that polys' will be sorted in descending Z order
+		return z1 > z2;
+	}
+	// 根据z最大值排序
+	inline bool CompareFarZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+		float z1, z2;
+		// dereference the poly pointers
+		auto poly_1 = *arg1;
+		auto poly_2 = *arg2;
+
+		// compute the near z of each polygon
+		z1 = std::fmax(poly_1.tvlist[0].z, poly_1.tvlist[1].z);
+		z1 = std::fmax(z1, poly_1.tvlist[2].z);
+
+		z2 = std::fmax(poly_2.tvlist[0].z, poly_2.tvlist[1].z);
+		z2 = std::fmax(z2, poly_2.tvlist[2].z);
+
+		// compare z1 and z2, such that polys' will be sorted in descending Z order
+		return z1 > z2;
+	}
+	// 根据z平均值排序
+	inline bool CompareAvgZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+		float z1, z2;
+		// dereference the poly pointers
+		auto poly_1 = *arg1;
+		auto poly_2 = *arg2;
+
+		// compute the near z of each polygon
+		z1 = (poly_1.tvlist[0].z + poly_1.tvlist[1].z + poly_1.tvlist[2].z) / 3;
+		z2 = (poly_2.tvlist[0].z + poly_2.tvlist[1].z + poly_2.tvlist[2].z) / 3;
+
+		// compare z1 and z2, such that polys' will be sorted in descending Z order
+		return z1 > z2;
+	}
+
 	class RenderList {
 	public:
 		RenderList(){}
 		~RenderList() {}
 		void Reset() {
-			numPolys = 0;
+			polyPtrs.clear();
 		}
 		int state{ 0 };//状态
 		int attr{ 0 };//属性
 		//渲染列表是一个指针数组，其中每个指针指向一个自包含的、可渲染的多边形
 		//如需要根据z值排序时，修改的是渲染列表
-		PolygonFull* polyPtrs[MAX_RENDER_POLYGON];
+		std::vector<PolygonFull *> polyPtrs;
 		//多边形存放数组，为避免每帧都为多边形分配/释放内存
-		PolygonFull polyData[MAX_RENDER_POLYGON];
-		int numPolys{ 0 };//渲染列表中包含的多边形数目
+		std::vector<PolygonFull> polyData;	
 		
 		//对渲染列表的多边形变换	//@parm rederList 渲染列表，mat 变换矩阵 ，type 指定要变换的坐标
 		void TransformRenderList(Matrix<float, 4, 4> &mat, TransfromType type) {
 			switch (type) {
 			case TransfromType::kLocalOnly:
-				for (int i = 0; i < numPolys; ++i) {
+				for (int i = 0; i < polyPtrs.size(); ++i) {
 					auto curPoly = polyPtrs[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
@@ -565,7 +614,7 @@ namespace maki{
 				}
 				break;
 			case TransfromType::kTransOnly:
-				for (int i = 0; i < numPolys; ++i) {
+				for (int i = 0; i < polyPtrs.size(); ++i) {
 					auto curPoly = polyPtrs[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
@@ -580,7 +629,7 @@ namespace maki{
 				}
 				break;
 			case TransfromType::kLocalToTrans:
-				for (int i = 0; i < numPolys; ++i) {
+				for (int i = 0; i < polyPtrs.size(); ++i) {
 					auto curPoly = polyPtrs[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
@@ -602,7 +651,7 @@ namespace maki{
 		//转换成世界坐标
 		void TransfromToWorld(Vector4D worldPos,TransfromType type = TransfromType::kLocalToTrans) {
 			if (type == TransfromType::kLocalToTrans) {
-				for (int i = 0; i < numPolys; ++i) {
+				for (int i = 0; i < polyPtrs.size(); ++i) {
 					auto curPoly = polyPtrs[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
@@ -616,7 +665,7 @@ namespace maki{
 				}
 			}
 			else {//TransfromType::kTransOnly
-				for (int i = 0; i < numPolys; ++i) {
+				for (int i = 0; i < polyPtrs.size(); ++i) {
 					auto curPoly = polyPtrs[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
@@ -635,7 +684,7 @@ namespace maki{
 		//世界坐标-》相机坐标
 		void WorldToCamera(Camera &cam)
 		{//根据相机变换矩阵将渲染列表中的多边形换为相机坐标
-			for (int i = 0; i < numPolys; ++i) {
+			for (int i = 0; i < polyPtrs.size(); ++i) {
 				auto curPoly = polyPtrs[i];
 				if (curPoly == nullptr ||
 					!(curPoly->state &PloygonStates::kActive) ||
@@ -651,7 +700,7 @@ namespace maki{
 		
 		//透视变换(非矩阵法，这里假设渲染列表的多边形已被变换为相机坐标)
 		void CameraToPerspective(Camera &cam) {
-			for (int poly = 0; poly < numPolys; poly++)
+			for (int poly = 0; poly < polyPtrs.size(); poly++)
 			{
 				// acquire current polygon
 				auto currPoly = polyPtrs[poly];
@@ -680,7 +729,7 @@ namespace maki{
 		//视口变换
 		void PerspectiveToScreen(Camera &cam) {
 			//渲染列表已完成透视变换并归一化，透视坐标-》屏幕坐标
-			for (int poly = 0; poly < numPolys; poly++){
+			for (int poly = 0; poly < polyPtrs.size(); poly++){
 				// acquire current polygon
 				auto currPoly = polyPtrs[poly];
 
@@ -705,7 +754,7 @@ namespace maki{
 		
 		  //相机坐标到屏幕坐标转换（直接法）
 		void CameraToScreen(Camera &cam) {
-			for (int poly = 0; poly < numPolys; poly++){
+			for (int poly = 0; poly < polyPtrs.size(); poly++){
 				// acquire current polygon
 				auto currPoly = polyPtrs[poly];
 
@@ -739,7 +788,7 @@ namespace maki{
 		//背面消除
 		void RemoveBackfaces(Camera cam) {
 			// 设置多边形背面状态
-			for (int poly = 0; poly < numPolys; ++poly)
+			for (int poly = 0; poly < polyPtrs.size(); ++poly)
 			{
 				// acquire current polygon
 				auto currPoly = polyPtrs[poly];
@@ -771,7 +820,7 @@ namespace maki{
 		
 		//从齐次坐标转为非齐次坐标
 		void ConvertFromHomo4D() {
-			for (int poly = 0; poly < numPolys; poly++)
+			for (int poly = 0; poly < polyPtrs.size(); poly++)
 			{
 				// acquire current polygon
 				auto currPoly = polyPtrs[poly];
@@ -792,7 +841,28 @@ namespace maki{
 
 		}
 
+		//根据z值对多边形排序
+		void SortByZ(SortType type){
+			switch (type){
+			case SortType::kAvgZ:  //  - sorts on average of all vertices
+			{
+				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareAvgZ);
+			} break;
 
+			case SortType::kMinZ: // - sorts on closest z vertex of each poly
+			{
+				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareNearZ);
+			} break;
+
+			case SortType::kMaxZ:  //  - sorts on farthest z vertex of each poly
+			{
+				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareFarZ);
+			} break;
+
+			default: break;
+			} // end switch
+
+		}
 
 	};
 	

@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <algorithm>
+#include "Object.h"
 namespace maki {
 	// 位掩码
 	constexpr auto PLX_SHADE_MODE_MASK = 0x6000;//抽取着色模式掩码
@@ -264,20 +265,20 @@ namespace maki {
 			switch (shade_mode)
 			{
 			case PLX_SHADE_MODE_PURE_FLAG: {
-				obj.plist[poly].attr = obj.plist[poly].attr | POLY4DV1_ATTR_SHADE_MODE_PURE;
+				obj.plist[poly].attr = obj.plist[poly].attr | PloygonShadeMode::kPuer;
 			} break;
 
 			case PLX_SHADE_MODE_FLAT_FLAG: {
-				obj.plist[poly].attr = obj.plist[poly].attr | POLY4DV1_ATTR_SHADE_MODE_FLAT;
+				obj.plist[poly].attr = obj.plist[poly].attr | PloygonShadeMode::kFlat;
 
 			} break;
 
 			case PLX_SHADE_MODE_GOURAUD_FLAG: {
-				obj.plist[poly].attr = obj.plist[poly].attr | POLY4DV1_ATTR_SHADE_MODE_GOURAUD;
+				obj.plist[poly].attr = obj.plist[poly].attr | PloygonShadeMode::kGouraud;
 			} break;
 
 			case PLX_SHADE_MODE_PHONG_FLAG: {
-				obj.plist[poly].attr = obj.plist[poly].attr | POLY4DV1_ATTR_SHADE_MODE_PHONG;
+				obj.plist[poly].attr = obj.plist[poly].attr | PloygonShadeMode::kPhong;
 			} break;
 
 			default: break;

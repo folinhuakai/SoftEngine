@@ -1,5 +1,6 @@
 #pragma once
 #include"VectorXD.h"
+#include <vector>
 //https://zhuanlan.zhihu.com/p/43899251
 namespace maki {
 	using uchar = unsigned char;
@@ -46,8 +47,8 @@ namespace maki {
 		void *ptr;
 
 		Light() = default;
-		Light( int id, LightState state, int attr, int c_ambient, int c_diffuse, int c_specular, Point4D  &pos,
-			Vector4D &dir, float kc = 0.0f, float kl = 0.0f,float kq = 0.0f, float spot_inner = 0.0f, float spot_outer = 0.0f, float pf = 0.0f){
+		Light(int id, LightState state, int attr, int c_ambient, int c_diffuse, int c_specular, Point4D  &pos,
+			Vector4D &dir, float kc , float kl ,float kq , float spot_inner, float spot_outer , float pf ){
 			id = id;
 			state = state;
 			attr = attr;
@@ -73,9 +74,9 @@ namespace maki {
 
 	class LightBuilder {
 	private:
-		LightState state{ LightState::kOff };
 		int id{ 0 };
-		int attr{ 0 };  // 光照类型及其他属性
+		LightState state{ LightState::kOff };		
+		int attr{0 };  // 光照类型及其他属性
 
 		Rgba c_ambient{ 0 };   // 环境光强度
 		Rgba c_diffuse{ 0 };   // 散射光强度
@@ -151,8 +152,8 @@ namespace maki {
 		}
 		
 		Light build() {
-			return Light(id, state, attr, c_ambient, c_diffuse, c_specular,  pos,
-				dir, kc, kl, kq,  spot_inner,  spot_outer , pf );
+			//return Light(id,state,attr,c_ambient,c_diffuse,c_specular,pos,dir,kc,kl,kq,spot_inner,spot_outer,pf);
+			return Light();
 		}
 	};
 }
