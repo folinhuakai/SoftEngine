@@ -150,6 +150,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="catch.hpp" />
     <ClInclude Include="Draw.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="LoadObject.h" />
     <ClInclude Include="main_switch.h" />
     <ClInclude Include="Material.h" />

@@ -1,15 +1,37 @@
 #pragma once
 #include"VectorXD.h"
+//https://zhuanlan.zhihu.com/p/43899251
 namespace maki {
+	using uchar = unsigned char;
+	//状态
+	enum class LightState {
+		kOn,
+		kOff,
+	};
+	//光源类型
+	enum LightType {
+		kAmbient		= 0x0001,//环境光
+		kInfinite		= 0x0002,//无穷远光源
+		kPoint			= 0x0004,//点光源
+		kSpotLight1		= 0x0008,//聚光灯
+		kSpotLight2		= 0x0010, //聚光灯
+	};
+	union Rgba
+	{
+		int rgba;                    // compressed format
+		uchar rgba_M[4];             // array format
+		struct { uchar a, b, g, r; }; // explict name format
+	}; // end union
+
 	class Light{
 	public:
-		int state{ 0 };
+		LightState state{ LightState::kOff };
 		int id{ 0 };
 		int attr{ 0 };  // 光照类型及其他属性
 
-		int c_ambient{0};   // 环境光强度
-		int c_diffuse{ 0 };   // 散射光强度
-		int c_specular{ 0 };  // 镜面反射光强度
+		Rgba c_ambient{0};   // 环境光强度
+		Rgba c_diffuse{ 0 };   // 散射光强度
+		Rgba c_specular{ 0 };  // 镜面反射光强度
 
 		Point4D  pos;       // 光源位置
 		Vector4D dir;       // 光源方向
@@ -24,7 +46,7 @@ namespace maki {
 		void *ptr;
 
 		Light() = default;
-		Light( int id, int state, int attr, int c_ambient, int c_diffuse, int c_specular, Point4D  &pos,
+		Light( int id, LightState state, int attr, int c_ambient, int c_diffuse, int c_specular, Point4D  &pos,
 			Vector4D &dir, float kc = 0.0f, float kl = 0.0f,float kq = 0.0f, float spot_inner = 0.0f, float spot_outer = 0.0f, float pf = 0.0f){
 			id = id;
 			state = state;
@@ -47,18 +69,17 @@ namespace maki {
 			spot_outer = spot_outer;
 			pf = pf;
 		}
-
 	};
 
 	class LightBuilder {
 	private:
-		int state{ 0 };
+		LightState state{ LightState::kOff };
 		int id{ 0 };
 		int attr{ 0 };  // 光照类型及其他属性
 
-		int c_ambient{ 0 };   // 环境光强度
-		int c_diffuse{ 0 };   // 散射光强度
-		int c_specular{ 0 };  // 镜面反射光强度
+		Rgba c_ambient{ 0 };   // 环境光强度
+		Rgba c_diffuse{ 0 };   // 散射光强度
+		Rgba c_specular{ 0 };  // 镜面反射光强度
 
 		Point4D  pos;       // 光源位置
 		Vector4D dir;       // 光源方向
@@ -73,7 +94,7 @@ namespace maki {
 			id = id;
 			return *this;
 		}
-		LightBuilder& setState(int state) {
+		LightBuilder& setState(LightState state) {
 			state = state;
 			return *this;
 		}		
@@ -93,7 +114,7 @@ namespace maki {
 			c_specular = c_specular;
 			return *this;
 		}
-		LightBuilder& setBasic(int id, int state, int attr) {
+		LightBuilder& setBasic(int id, LightState state, int attr) {
 			id = id;
 			state = state;
 			attr = attr;
