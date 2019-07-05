@@ -4,15 +4,14 @@
 #include "Math.h"
 #include "Light.h"
 #include <algorithm>
-
-
+#include<vector>
 namespace maki{		
 	constexpr auto MAX_VERTICES = 128; //物体最大顶点数
 	constexpr auto MAX_POLYS = 128;//物体最大多边形数
 	constexpr auto MAX_RENDER_POLYGON = 128;//渲染列表最大多边形数
 #define RGB_FROM32BIT(RGB, r,g,b) { *r = ( ((RGB) >> 24) & 0xFF); *g = (((RGB) >> 16) & 0xFF); *b = ( ((RGB) >> 8) & 0xFF);}
 #define RGBA32BIT(r,g,b,a) ((a) + ((b) << 8) + ((g) << 16) + ((r) << 24))
-
+	
 	//多边形 attr
 	constexpr auto POLY4DV1_ATTR_2SIDED = 0x0001;
 	constexpr auto POLY4DV1_ATTR_TRANSPARENT = 0x0002;
@@ -63,6 +62,36 @@ namespace maki{
 		kCullZPlane = 0x0004,
 		kCullXYZPlane = 0x0007,
 	};
+	
+	/************************顶点*******************************/
+	class Vertex {
+	public:
+		Vertex(){}
+		Vertex(float x = 0.0f, float y = 0.0f, float z = 0.0f, unsigned char r = 255, unsigned char g = 255, unsigned char b = 255)
+		{
+			pos = Vector4D(x, y, z,1);
+			color = Color(r, g, b);
+		}
+		Vector4D pos;
+		Vector4D normal;
+		Point2D uv;
+		Color color;
+	};
+
+	/************************************************************/
+	class Mesh{
+	public:
+		//原始顶点列表
+		std::vector<Vertex> vlistLocal;
+		//变换顶点列表
+		std::vector<Vertex> vlistTtran;
+		//面法线
+		std::vector<Vector4D> faceNormal;
+		//索引数组(连续的3个顶点构成三角面)
+		std::vector<unsigned int> index;
+		//静态or动态
+		bool isStatic = false;
+	};
 	/**************************多边形***************************/
 	class Polygon
 	{
@@ -111,10 +140,11 @@ namespace maki{
 		Vector4D dir;//物体在局部坐标系的旋转角度
 		Vector4D ux, uy, uz;//物体局部坐标，用于存储物体的的朝向，旋转期间将被自动更新
 		int numVertices{ 0 };//物体顶点数
-		Point4D vlistLocal[MAX_VERTICES];//用于存储顶点局部坐标的数组
-		Point4D vlistTransl[MAX_VERTICES];//存储变换后的顶点坐标数组
-		int numPolygons{ 0 };//物体网格多边形数
-		Polygon plist[MAX_POLYS];//多边形数组
+		//Point4D vlistLocal[MAX_VERTICES];//用于存储顶点局部坐标的数组
+		//Point4D vlistTransl[MAX_VERTICES];//存储变换后的顶点坐标数组
+		Mesh mesh;
+		//int numPolygons{ 0 };//物体网格多边形数
+		//Polygon plist[MAX_POLYS];//多边形数组
 		//对物体的顶点列表进行变换	//@parm obj需要变换的物体，mat 变换矩阵 ，type 指定要变换的列表 isChange 是否对朝向向量变换
 		void TransfromObject(Matrix<float, 4, 4> &mat,const TransfromType type, bool isChange) {
 			switch (type) {
@@ -527,6 +557,46 @@ namespace maki{
 			return true;
 
 		} // end 
+
+		//通过数学公式缩放(仅支持同等比例缩放)
+		void ScaleMath(const float scale) {
+			for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
+				mesh.vlistLocal[i].pos = mesh.vlistLocal[i].pos * scale;
+			}
+			return;
+		}
+		//计算物体平均半径和最大半径
+		float ComputeObjectRadius()
+		{
+			// this function computes the average and maximum radius for 
+			// sent object and opdates the object data
+
+			// reset incase there's any residue
+			avgRadius = 0;
+			maxRadius = 0;
+
+			// loop thru and compute radius
+			for (int vertex = 0; vertex < numVertices; vertex++)
+			{
+				// update the average and maximum radius
+				float dist_to_vertex =
+					sqrt(vlistLocal[vertex].x*vlistLocal[vertex].x +
+						vlistLocal[vertex].y*vlistLocal[vertex].y +
+						vlistLocal[vertex].z*vlistLocal[vertex].z);
+
+				// accumulate total radius
+				avgRadius += dist_to_vertex;
+
+				// update maximum radius   
+				if (dist_to_vertex > maxRadius)
+					maxRadius = dist_to_vertex;
+
+			} // end for vertex
+
+			// finallize average radius computation
+			avgRadius /= numVertices;
+
+		}
 	};
 
 

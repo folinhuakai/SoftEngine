@@ -17,12 +17,27 @@ namespace maki {
 		kSpotLight1		= 0x0008,//聚光灯
 		kSpotLight2		= 0x0010, //聚光灯
 	};
-	union Rgba
-	{
-		int rgba;                    // compressed format
-		uchar rgba_M[4];             // array format
-		struct { uchar a, b, g, r; }; // explict name format
-	}; // end union
+	/***********************颜色***************************/
+	class Color {
+	public:
+		union {
+			int rgba;
+			unsigned char arr[4];
+			struct
+			{
+				unsigned char r, g, b, a;
+			};
+		};
+		Color() = default;
+		Color(unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a = 255) :r(_r), g(_g), b(_b), a(_a) {}
+		Color(int _rgba) :rgba(_rgba) {}
+		void SetColor(unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a = 255) {
+			r = _r;
+			g = _g;
+			b = _b;
+			a = _a;
+		}
+	};
 
 	class Light{
 	public:
@@ -30,9 +45,9 @@ namespace maki {
 		int id{ 0 };
 		int attr{ 0 };  // 光照类型及其他属性
 
-		Rgba c_ambient{0};   // 环境光强度
-		Rgba c_diffuse{ 0 };   // 散射光强度
-		Rgba c_specular{ 0 };  // 镜面反射光强度
+		Color c_ambient{0};   // 环境光强度
+		Color c_diffuse{ 0 };   // 散射光强度
+		Color c_specular{ 0 };  // 镜面反射光强度
 
 		Point4D  pos;       // 光源位置
 		Vector4D dir;       // 光源方向
@@ -47,28 +62,28 @@ namespace maki {
 		void *ptr;
 
 		Light() = default;
-		Light(int id, LightState state, int attr, int c_ambient, int c_diffuse, int c_specular, Point4D  &pos,
-			Vector4D &dir, float kc , float kl ,float kq , float spot_inner, float spot_outer , float pf ){
-			id = id;
-			state = state;
-			attr = attr;
+		Light(int _id, LightState _state, int _attr, Color &_c_ambient, Color &_c_diffuse, Color &_c_specular, Point4D  &_pos,
+			Vector4D &_dir, float _kc , float _kl ,float _kq , float _spot_inner, float _spot_outer , float _pf ){
+			id = _id;
+			state = _state;
+			attr = _attr;
 
-			c_ambient = c_ambient;
-			c_diffuse = c_diffuse;
-			c_specular = c_specular;
+			c_ambient = _c_ambient;
+			c_diffuse = _c_diffuse;
+			c_specular = _c_specular;
 
-			pos = pos;
+			pos = _pos;
 
-			dir = dir;
+			dir = _dir;
 			dir.Normalize();
 
-			kc = kc;
-			kl = kl;
-			kq = kq;
+			kc = _kc;
+			kl = _kl;
+			kq = _kq;
 
-			spot_inner = spot_inner;
-			spot_outer = spot_outer;
-			pf = pf;
+			spot_inner = _spot_inner;
+			spot_outer = _spot_outer;
+			pf = _pf;
 		}
 	};
 
@@ -78,9 +93,9 @@ namespace maki {
 		LightState state{ LightState::kOff };		
 		int attr{0 };  // 光照类型及其他属性
 
-		Rgba c_ambient{ 0 };   // 环境光强度
-		Rgba c_diffuse{ 0 };   // 散射光强度
-		Rgba c_specular{ 0 };  // 镜面反射光强度
+		Color c_ambient{ 0 };   // 环境光强度
+		Color c_diffuse{ 0 };   // 散射光强度
+		Color c_specular{ 0 };  // 镜面反射光强度
 
 		Point4D  pos;       // 光源位置
 		Vector4D dir;       // 光源方向
@@ -91,69 +106,68 @@ namespace maki {
 		float pf{ 0.0f };           // 聚光灯指数因子
 	public:
 		LightBuilder() {}
-		LightBuilder& setID(int id) {
-			id = id;
+		LightBuilder& setID(int _id) {
+			id = _id;
 			return *this;
 		}
-		LightBuilder& setState(LightState state) {
-			state = state;
+		LightBuilder& setState(LightState _state) {
+			state = _state;
 			return *this;
 		}		
-		LightBuilder& setAttr(int attr) {
-			attr = attr;
+		LightBuilder& setAttr(int _attr) {
+			attr = _attr;
 			return *this;
 		}
-		LightBuilder& setAmbient(int c_ambient) {
-			c_ambient = c_ambient;
+		LightBuilder& setAmbient(int _c_ambient) {
+			c_ambient = _c_ambient;
 			return *this;
 		}
-		LightBuilder& setDiffuse(int c_diffuse) {
-			c_diffuse = c_diffuse;
+		LightBuilder& setDiffuse(int _c_diffuse) {
+			c_diffuse = _c_diffuse;
 			return *this;
 		}
-		LightBuilder& setSpecular(int c_specular) {
-			c_specular = c_specular;
+		LightBuilder& setSpecular(int _c_specular) {
+			c_specular = _c_specular;
 			return *this;
 		}
-		LightBuilder& setBasic(int id, LightState state, int attr) {
-			id = id;
-			state = state;
-			attr = attr;
+		LightBuilder& setBasic(int _id, LightState _state, int _attr) {
+			id = _id;
+			state = _state;
+			attr = _attr;
 			return *this;
 		}
-		LightBuilder& setIntensity(int c_ambient, int c_diffuse,int c_specular) {
+		LightBuilder& setIntensity(int _c_ambient, int _c_diffuse,int _c_specular) {
 			//光照强度
-			c_ambient = c_ambient;
-			c_diffuse = c_diffuse;
-			c_specular = c_specular;
+			c_ambient = _c_ambient;
+			c_diffuse = _c_diffuse;
+			c_specular = _c_specular;
 			return *this;
 		}
-		LightBuilder& setPos(Point4D &pos) {
-			pos = pos;
+		LightBuilder& setPos(Point4D &_pos) {
+			pos = _pos;
 			return *this;
 		}
-		LightBuilder& setDir(Vector4D &dir) {
-			dir = dir;
+		LightBuilder& setDir(Vector4D &_dir) {
+			dir = _dir;
 			return *this;
 		}
-		LightBuilder& setAttenFactor(float kc, float kl, float kq) {
+		LightBuilder& setAttenFactor(float _kc, float _kl, float _kq) {
 			//设置衰减因子
-			kc = kc;
-			kl = kl;
-			kq = kq;
+			kc = _kc;
+			kl = _kl;
+			kq = _kq;
 			return *this;
 		}
-		LightBuilder& setSpot(float spot_inner = 0.0f, float spot_outer = 0.0f, float pf = 0.0f) {
+		LightBuilder& setSpot(float _spot_inner = 0.0f, float _spot_outer = 0.0f, float _pf = 0.0f) {
 			//设置聚光灯参数
-			spot_inner = spot_inner;
-			spot_outer = spot_outer;
-			pf = pf;
+			spot_inner = _spot_inner;
+			spot_outer = _spot_outer;
+			pf = _pf;
 			return *this;
 		}
 		
 		Light build() {
-			//return Light(id,state,attr,c_ambient,c_diffuse,c_specular,pos,dir,kc,kl,kq,spot_inner,spot_outer,pf);
-			return Light();
+			return Light(id,state,attr,c_ambient,c_diffuse,c_specular,pos,dir,kc,kl,kq,spot_inner,spot_outer,pf);
 		}
 	};
 }
