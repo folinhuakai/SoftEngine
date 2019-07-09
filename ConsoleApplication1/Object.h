@@ -66,8 +66,8 @@ namespace maki{
 	/************************顶点*******************************/
 	class Vertex {
 	public:
-		Vertex(){}
-		Vertex(float x = 0.0f, float y = 0.0f, float z = 0.0f, unsigned char r = 255, unsigned char g = 255, unsigned char b = 255)
+		Vertex() = default;
+		Vertex(float x, float y, float z, unsigned char r = 0, unsigned char g = 0, unsigned char b = 0)
 		{
 			pos = Vector4D(x, y, z,1);
 			color = Color(r, g, b);
@@ -92,36 +92,19 @@ namespace maki{
 		//静态or动态
 		bool isStatic = false;
 	};
-	/**************************多边形***************************/
+
+	/***********************多边形(目前只支持三角形)******************************/
 	class Polygon
 	{
 	public:
-		Polygon(){}
-		~Polygon() {}
-		int state{ PloygonStates::kInit };//状态
-		int attr{ 0 };//物理属性
-		int color{ 0 };//颜色
-		int tColor{ 0 };//颜色
-		Point4D *vlist{};//顶点列表
-		int vert[3];//顶点列表中元素索引
-	};
-
-	/***********************自包含多边形******************************/
-	class PolygonFull
-	{
-	public:
-		PolygonFull() {}
-		~PolygonFull() {}
 		int state{ PloygonStates::kInit };//状态
 		int attr{ 0 };
 		int color{ 0 };
 
-		Point4D vlist[3];//三角形顶点
-		Point4D tvlist[3];//变换后顶点
-
-		Polygon *next{};
-		Polygon *prev{};
-		
+		Vertex vlist[3];//三角形顶点
+		Vertex tvlist[3];//三角形顶点
+		Vector4D faceNormal;//面法线
+		int materialID = -1;//材质id	
 	};
 
 	/*************************物体************************************/
@@ -139,7 +122,7 @@ namespace maki{
 		Vector4D worldPos;//世界坐标
 		Vector4D dir;//物体在局部坐标系的旋转角度
 		Vector4D ux, uy, uz;//物体局部坐标，用于存储物体的的朝向，旋转期间将被自动更新
-		int numVertices{ 0 };//物体顶点数
+		//int numVertices{ 0 };//物体顶点数
 		//Point4D vlistLocal[MAX_VERTICES];//用于存储顶点局部坐标的数组
 		//Point4D vlistTransl[MAX_VERTICES];//存储变换后的顶点坐标数组
 		Mesh mesh;
@@ -149,18 +132,18 @@ namespace maki{
 		void TransfromObject(Matrix<float, 4, 4> &mat,const TransfromType type, bool isChange) {
 			switch (type) {
 			case TransfromType::kLocalOnly:
-				for (int i = 0; i < numVertices; ++i) {
-					vlistLocal[i] = vlistLocal[i] * mat;
+				for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
+					mesh.vlistLocal[i].pos = mesh.vlistLocal[i].pos * mat;
 				}
 				break;
 			case TransfromType::kTransOnly:
-				for (int i = 0; i < numVertices; ++i) {
-					vlistTransl[i] = vlistTransl[i] * mat;
+				for (int i = 0; i < mesh.vlistTtran.size(); ++i) {
+					mesh.vlistTtran[i].pos = mesh.vlistTtran[i].pos * mat;
 				}
 				break;
 			case TransfromType::kLocalToTrans:
-				for (int i = 0; i < numVertices; ++i) {
-					vlistTransl[i] = vlistLocal[i] * mat;
+				for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
+					mesh.vlistTtran[i].pos = mesh.vlistLocal[i].pos * mat;
 				}
 				break;
 			default:
@@ -177,13 +160,13 @@ namespace maki{
 		// 将物体从局部坐标转换成世界坐标(直接法)
 		void TransfromToWorld(const TransfromType type = TransfromType::kLocalToTrans) {
 			if (type == TransfromType::kLocalToTrans) {
-				for (int i = 0; i < numVertices; ++i) {
-					vlistTransl[i] = vlistLocal[i] + worldPos;
+				for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
+					mesh.vlistTtran[i].pos = mesh.vlistLocal[i].pos + worldPos;
 				}
 			}
 			else {//TransfromType::kTransOnly
-				for (int i = 0; i < numVertices; ++i) {
-					vlistTransl[i] = vlistTransl[i] + worldPos;
+				for (int i = 0; i < mesh.vlistTtran.size(); ++i) {
+					mesh.vlistTtran[i].pos = mesh.vlistTtran[i].pos + worldPos;
 				}
 			}
 
@@ -200,9 +183,9 @@ namespace maki{
 		//世界坐标到相机坐标
 		void WorldToCamera(Camera &cam)
 		{//对object中的vlistTrans的顶点进行变换，假设物体的顶点已变换为世界坐标，并结果存在vlistTrans
-			for (int vertex = 0; vertex < numVertices; ++vertex)
+			for (int vertex = 0; vertex < mesh.vlistTtran.size(); ++vertex)
 			{
-				vlistTransl[vertex] = vlistTransl[vertex] * cam.mcam;
+				mesh.vlistTtran[vertex].pos = mesh.vlistTtran[vertex].pos * cam.mcam;
 			}
 		}
 		//相机坐标到屏幕坐标变换
@@ -211,28 +194,28 @@ namespace maki{
 			float alpha = (0.5*cam.viewPortWidth - 0.5);
 			float beta = (0.5*cam.viewPortHeight - 0.5);
 
-			for (int vertex = 0; vertex < numVertices; ++vertex) {
-				float z = vlistTransl[vertex].z;
+			for (int vertex = 0; vertex < mesh.vlistTtran.size(); ++vertex) {
+				float z = mesh.vlistTtran[vertex].pos.z;
 
 				// transform the vertex by the view parameters in the camera
-				vlistTransl[vertex].x = cam.viewDist * vlistTransl[vertex].x / z;
-				vlistTransl[vertex].y = cam.viewDist * vlistTransl[vertex].y*cam.aspectRatio / z;
+				mesh.vlistTtran[vertex].pos.x = cam.viewDist * mesh.vlistTtran[vertex].pos.x / z;
+				mesh.vlistTtran[vertex].pos.y = cam.viewDist * mesh.vlistTtran[vertex].pos.y*cam.aspectRatio / z;
 				// z = z, so no change
 
-				vlistTransl[vertex].x = alpha + alpha * vlistTransl[vertex].x;
-				vlistTransl[vertex].y = beta - beta * vlistTransl[vertex].y;
+				mesh.vlistTtran[vertex].pos.x = alpha + alpha * mesh.vlistTtran[vertex].pos.x;
+				mesh.vlistTtran[vertex].pos.y = beta - beta * mesh.vlistTtran[vertex].pos.y;
 			} // end for vertex
 
 		} // end Camera_To_P
 
 		//透视变换
 		void CameraToPerspective(Camera &cam) {
-			for (int vertex = 0; vertex < numVertices; ++vertex) {
-				float z = vlistTransl[vertex].z;
+			for (int vertex = 0; vertex < mesh.vlistTtran.size(); ++vertex) {
+				float z = mesh.vlistTtran[vertex].pos.z;
 
 				// transform the vertex by the view parameters in the camera
-				vlistTransl[vertex].x = cam.viewDist * vlistTransl[vertex].x / z;
-				vlistTransl[vertex].y = cam.viewDist * vlistTransl[vertex].y * cam.aspectRatio / z;
+				mesh.vlistTtran[vertex].pos.x = cam.viewDist * mesh.vlistTtran[vertex].pos.x / z;
+				mesh.vlistTtran[vertex].pos.y = cam.viewDist * mesh.vlistTtran[vertex].pos.y * cam.aspectRatio / z;
 			} // end for vertex
 		}
 
@@ -241,17 +224,17 @@ namespace maki{
 			float alpha = (0.5*cam.viewPortWidth - 0.5);
 			float beta = (0.5*cam.viewPortHeight - 0.5);
 
-			for (int vertex = 0; vertex < numVertices; ++vertex) {
+			for (int vertex = 0; vertex < mesh.vlistTtran.size(); ++vertex) {
 
 				// transform the vertex by the view parameters in the camera
-				vlistTransl[vertex].x = alpha + alpha * vlistTransl[vertex].x;
-				vlistTransl[vertex].y = beta - beta * vlistTransl[vertex].y;
+				mesh.vlistTtran[vertex].pos.x = alpha + alpha * mesh.vlistTtran[vertex].pos.x;
+				mesh.vlistTtran[vertex].pos.y = beta - beta * mesh.vlistTtran[vertex].pos.y;
 
 			} // end for vertex
 		}
 
-		// 物体剔除
-		bool CullObject(Camera &cam, CullType cullflags) {//根据相机信息判断物体是否在视景体内，cullflags指定在哪些轴上执行剔除
+		// 物体剔除,根据相机信息判断物体是否在视景体内，cullflags指定在哪些轴上执行剔除
+		bool CullObject(Camera &cam, CullType cullflags) {
 		//1.将包围球球心变换到相机坐标
 			auto spherePos = worldPos * cam.mcam;
 
@@ -289,68 +272,9 @@ namespace maki{
 
 			return true;
 		}
-		// 背面消除
-		void RemoveBackfaces(Camera cam) {
-			//根据vlistTrans中顶点数据及相机位置消除物体的背面多边形（面法线与视点间的向量点乘，<90°即背面）
-			if (state & ObjectState::kCull)
-				return;
-
-			// 处理每个多边形
-			for (int poly = 0; poly < numPolygons; ++poly)
-			{
-				// acquire polygon
-				auto currPoly = plist[poly];
-				// 判断多边形有效性
-				if (!(currPoly.state & PloygonStates::kActive) ||
-					(currPoly.state & PloygonStates::kBackface) ||
-					(currPoly.attr  & POLY4DV1_ATTR_2SIDED) ||
-					(currPoly.state & PloygonStates::kClipped))
-					continue; // move onto next poly
-
-				 // 获得顶点下标（不是自包含）
-				int vindex_0 = currPoly.vert[0];
-				int vindex_1 = currPoly.vert[1];
-				int vindex_2 = currPoly.vert[2];
-
-				//计算多边形面法线，顶点是按顺时针方向排列
-				auto u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
-				auto v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2
-				auto n = u.Cross(v);//u x v
-
-				auto view = cam.pos - vlistTransl[vindex_0];//视点指向多边形向量
-
-				// 计算点积
-				float dp = n * view;
-
-				// if the sign is > 0 then visible, 0 = scathing, < 0 invisible
-				if (dp <= 0.0) {
-					currPoly.state = currPoly.state & PloygonStates::kBackface;
-				}
-
-			} // end for poly
-
-		} // end
-
-		//清除物体（裁剪和背面）状态标识
-		void ResetOjbectState() {
-			//清除物体剔除状态
-			state = state & (!ObjectState::kCull);
-
-			// 重置多边形裁剪和背面剔除标记
-			for (int poly = 0; poly < numPolygons; poly++)
-			{
-				auto curPoly = plist[poly];
-				if (!(curPoly.state &PloygonStates::kActive)) {
-					continue;
-				}
-				curPoly.state = curPoly.state & (!PloygonStates::kClipped);
-				curPoly.state = curPoly.state & (!PloygonStates::kBackface);
-
-			}
-		}
 
 		//光照计算
-		bool LightInWorld(Camera &cam,
+		/*bool LightInWorld(Camera &cam,
 			const std::vector<Light> lights){
 			//根据光源列表和相机对物体执行光照计算，支持固定着色和恒定着色
 			unsigned int r_base, g_base, b_base,  // 初始颜色
@@ -556,9 +480,10 @@ namespace maki{
 		// return success
 			return true;
 
-		} // end 
+		} // end */
 
 		//通过数学公式缩放(仅支持同等比例缩放)
+		
 		void ScaleMath(const float scale) {
 			for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
 				mesh.vlistLocal[i].pos = mesh.vlistLocal[i].pos * scale;
@@ -576,13 +501,11 @@ namespace maki{
 			maxRadius = 0;
 
 			// loop thru and compute radius
-			for (int vertex = 0; vertex < numVertices; vertex++)
+			for (int vertex = 0; vertex < mesh.vlistLocal.size(); ++vertex)
 			{
+				auto _pos = mesh.vlistLocal[vertex].pos;
 				// update the average and maximum radius
-				float dist_to_vertex =
-					sqrt(vlistLocal[vertex].x*vlistLocal[vertex].x +
-						vlistLocal[vertex].y*vlistLocal[vertex].y +
-						vlistLocal[vertex].z*vlistLocal[vertex].z);
+				float dist_to_vertex = sqrt(_pos.x*_pos.x +_pos.y*_pos.y +_pos.z*_pos.z);
 
 				// accumulate total radius
 				avgRadius += dist_to_vertex;
@@ -594,7 +517,7 @@ namespace maki{
 			} // end for vertex
 
 			// finallize average radius computation
-			avgRadius /= numVertices;
+			avgRadius /= mesh.vlistLocal.size();
 
 		}
 	};
@@ -602,49 +525,40 @@ namespace maki{
 
 	/************************主多边形列表*************************************/
 	// 根据z最小值排序
-	inline bool CompareNearZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+	inline bool CompareNearZ(const Polygon &poly_1, const Polygon & poly_2) {
 		float z1, z2;
-		// dereference the poly pointers
-		auto poly_1 = *arg1;
-		auto poly_2 = *arg2;
 
 		// compute the near z of each polygon
-		z1 = std::fmin(poly_1.tvlist[0].z, poly_1.tvlist[1].z);
-		z1 = std::fmin(z1, poly_1.tvlist[2].z);
+		z1 = std::fmin(poly_1.tvlist[0].pos.z, poly_1.tvlist[1].pos.z);
+		z1 = std::fmin(z1, poly_1.tvlist[2].pos.z);
 
-		z2 = std::fmin(poly_2.tvlist[0].z, poly_2.tvlist[1].z);
-		z2 = std::fmin(z2, poly_2.tvlist[2].z);
+		z2 = std::fmin(poly_2.tvlist[0].pos.z, poly_2.tvlist[1].pos.z);
+		z2 = std::fmin(z2, poly_2.tvlist[2].pos.z);
 
 		// compare z1 and z2, such that polys' will be sorted in descending Z order
 		return z1 > z2;
 	}
 	// 根据z最大值排序
-	inline bool CompareFarZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+	inline bool CompareFarZ(const Polygon &poly_1, const Polygon &poly_2) {
 		float z1, z2;
-		// dereference the poly pointers
-		auto poly_1 = *arg1;
-		auto poly_2 = *arg2;
 
 		// compute the near z of each polygon
-		z1 = std::fmax(poly_1.tvlist[0].z, poly_1.tvlist[1].z);
-		z1 = std::fmax(z1, poly_1.tvlist[2].z);
+		z1 = std::fmax(poly_1.tvlist[0].pos.z, poly_1.tvlist[1].pos.z);
+		z1 = std::fmax(z1, poly_1.tvlist[2].pos.z);
 
-		z2 = std::fmax(poly_2.tvlist[0].z, poly_2.tvlist[1].z);
-		z2 = std::fmax(z2, poly_2.tvlist[2].z);
+		z2 = std::fmax(poly_2.tvlist[0].pos.z, poly_2.tvlist[1].pos.z);
+		z2 = std::fmax(z2, poly_2.tvlist[2].pos.z);
 
 		// compare z1 and z2, such that polys' will be sorted in descending Z order
 		return z1 > z2;
 	}
 	// 根据z平均值排序
-	inline bool CompareAvgZ(const PolygonFull *arg1, const PolygonFull * arg2) {
+	inline bool CompareAvgZ(const Polygon &poly_1, const Polygon &poly_2) {
 		float z1, z2;
-		// dereference the poly pointers
-		auto poly_1 = *arg1;
-		auto poly_2 = *arg2;
 
 		// compute the near z of each polygon
-		z1 = (poly_1.tvlist[0].z + poly_1.tvlist[1].z + poly_1.tvlist[2].z) / 3;
-		z2 = (poly_2.tvlist[0].z + poly_2.tvlist[1].z + poly_2.tvlist[2].z) / 3;
+		z1 = (poly_1.tvlist[0].pos.z + poly_1.tvlist[1].pos.z + poly_1.tvlist[2].pos.z) / 3;
+		z2 = (poly_2.tvlist[0].pos.z + poly_2.tvlist[1].pos.z + poly_2.tvlist[2].pos.z) / 3;
 
 		// compare z1 and z2, such that polys' will be sorted in descending Z order
 		return z1 > z2;
@@ -652,25 +566,18 @@ namespace maki{
 
 	class RenderList {
 	public:
-		RenderList(){}
-		~RenderList() {}
-		void Reset() {
-			polyPtrs.clear();
-		}
 		int state{ 0 };//状态
 		int attr{ 0 };//属性
-		//渲染列表是一个指针数组，其中每个指针指向一个自包含的、可渲染的多边形
-		//如需要根据z值排序时，修改的是渲染列表
-		std::vector<PolygonFull *> polyPtrs;
-		//多边形存放数组，为避免每帧都为多边形分配/释放内存
-		std::vector<PolygonFull> polyData;	
+
+		//多边形存放数组
+		std::vector<Polygon> polyData;	
 		
 		//对渲染列表的多边形变换	//@parm rederList 渲染列表，mat 变换矩阵 ，type 指定要变换的坐标
 		void TransformRenderList(Matrix<float, 4, 4> &mat, TransfromType type) {
 			switch (type) {
 			case TransfromType::kLocalOnly:
-				for (int i = 0; i < polyPtrs.size(); ++i) {
-					auto curPoly = polyPtrs[i];
+				for (int i = 0; i < polyData.size(); ++i) {
+					auto curPoly = &polyData[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
 						curPoly->state &PloygonStates::kClipped ||
@@ -678,14 +585,14 @@ namespace maki{
 						continue;
 					}
 					for (int vetNum = 0; vetNum < 3; ++vetNum) {
-						auto vect = curPoly->vlist[vetNum];
-						curPoly->vlist[vetNum] = vect * mat;
+						auto vect = curPoly->vlist[vetNum].pos;
+						curPoly->vlist[vetNum].pos = vect * mat;
 					}
 				}
 				break;
 			case TransfromType::kTransOnly:
-				for (int i = 0; i < polyPtrs.size(); ++i) {
-					auto curPoly = polyPtrs[i];
+				for (int i = 0; i < polyData.size(); ++i) {
+					auto curPoly = &polyData[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
 						curPoly->state &PloygonStates::kClipped ||
@@ -693,14 +600,14 @@ namespace maki{
 						continue;
 					}
 					for (int vetNum = 0; vetNum < 3; ++vetNum) {
-						auto vect = curPoly->tvlist[vetNum];
-						curPoly->tvlist[vetNum] = vect * mat;
+						auto vect = curPoly->tvlist[vetNum].pos;
+						curPoly->tvlist[vetNum].pos = vect * mat;
 					}
 				}
 				break;
 			case TransfromType::kLocalToTrans:
-				for (int i = 0; i < polyPtrs.size(); ++i) {
-					auto curPoly = polyPtrs[i];
+				for (int i = 0; i < polyData.size(); ++i) {
+					auto curPoly = &polyData[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
 						curPoly->state &PloygonStates::kClipped ||
@@ -708,8 +615,8 @@ namespace maki{
 						continue;
 					}
 					for (int vetNum = 0; vetNum < 3; ++vetNum) {
-						auto vect = curPoly->vlist[vetNum];
-						curPoly->tvlist[vetNum] = vect * mat;
+						auto vect = curPoly->vlist[vetNum].pos;
+						curPoly->tvlist[vetNum].pos = vect * mat;
 					}
 				}
 				break;
@@ -721,8 +628,8 @@ namespace maki{
 		//转换成世界坐标
 		void TransfromToWorld(Vector4D worldPos,TransfromType type = TransfromType::kLocalToTrans) {
 			if (type == TransfromType::kLocalToTrans) {
-				for (int i = 0; i < polyPtrs.size(); ++i) {
-					auto curPoly = polyPtrs[i];
+				for (int i = 0; i < polyData.size(); ++i) {
+					auto curPoly = &polyData[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
 						curPoly->state &PloygonStates::kClipped ||
@@ -730,13 +637,13 @@ namespace maki{
 						continue;
 					}
 					for (int vetNum = 0; vetNum < 3; ++vetNum) {
-						curPoly->tvlist[vetNum] = curPoly->vlist[vetNum] + worldPos;
+						curPoly->tvlist[vetNum].pos = curPoly->vlist[vetNum].pos + worldPos;
 					}
 				}
 			}
 			else {//TransfromType::kTransOnly
-				for (int i = 0; i < polyPtrs.size(); ++i) {
-					auto curPoly = polyPtrs[i];
+				for (int i = 0; i < polyData.size(); ++i) {
+					auto curPoly = &polyData[i];
 					if (curPoly == nullptr ||
 						!(curPoly->state &PloygonStates::kActive) ||
 						curPoly->state &PloygonStates::kClipped ||
@@ -744,7 +651,7 @@ namespace maki{
 						continue;
 					}
 					for (int vetNum = 0; vetNum < 3; ++vetNum) {
-						curPoly->tvlist[vetNum] = curPoly->tvlist[vetNum] + worldPos;
+						curPoly->tvlist[vetNum].pos = curPoly->tvlist[vetNum].pos + worldPos;
 					}
 				}
 			}
@@ -754,8 +661,8 @@ namespace maki{
 		//世界坐标-》相机坐标
 		void WorldToCamera(Camera &cam)
 		{//根据相机变换矩阵将渲染列表中的多边形换为相机坐标
-			for (int i = 0; i < polyPtrs.size(); ++i) {
-				auto curPoly = polyPtrs[i];
+			for (int i = 0; i < polyData.size(); ++i) {
+				auto curPoly = &polyData[i];
 				if (curPoly == nullptr ||
 					!(curPoly->state &PloygonStates::kActive) ||
 					curPoly->state &PloygonStates::kClipped ||
@@ -763,17 +670,17 @@ namespace maki{
 					continue;
 				}
 				for (int vetNum = 0; vetNum < 3; ++vetNum) {
-					curPoly->tvlist[vetNum] = curPoly->vlist[vetNum] * cam.mcam;
+					curPoly->tvlist[vetNum].pos = curPoly->vlist[vetNum].pos * cam.mcam;
 				}
 			}
 		}
 		
 		//透视变换(非矩阵法，这里假设渲染列表的多边形已被变换为相机坐标)
 		void CameraToPerspective(Camera &cam) {
-			for (int poly = 0; poly < polyPtrs.size(); poly++)
+			for (int poly = 0; poly < polyData.size(); poly++)
 			{
 				// acquire current polygon
-				auto currPoly = polyPtrs[poly];
+				auto currPoly = &polyData[poly];
 
 				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
 					(currPoly->state & PloygonStates::kClipped) ||
@@ -784,11 +691,11 @@ namespace maki{
 			 // all good, let's transform 
 				for (int vertex = 0; vertex < 3; vertex++)
 				{
-					float z = currPoly->tvlist[vertex].z;
+					float z = currPoly->tvlist[vertex].pos.z;
 
 					// transform the vertex by the view parameters in the camera
-					currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
-					currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;
+					currPoly->tvlist[vertex].pos.x = cam.viewDist*currPoly->tvlist[vertex].pos.x / z;
+					currPoly->tvlist[vertex].pos.y = cam.viewDist*currPoly->tvlist[vertex].pos.y*cam.aspectRatio / z;
 
 				} // end for vertex
 
@@ -799,9 +706,9 @@ namespace maki{
 		//视口变换
 		void PerspectiveToScreen(Camera &cam) {
 			//渲染列表已完成透视变换并归一化，透视坐标-》屏幕坐标
-			for (int poly = 0; poly < polyPtrs.size(); poly++){
+			for (int poly = 0; poly < polyData.size(); poly++){
 				// acquire current polygon
-				auto currPoly = polyPtrs[poly];
+				auto currPoly = &polyData[poly];
 
 				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
 					(currPoly->state & PloygonStates::kClipped) ||
@@ -815,8 +722,8 @@ namespace maki{
 				// all good, let's transform 
 				for (int vertex = 0; vertex < 3; vertex++)
 				{//坐标缩放，反转y轴
-					currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
-					currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+					currPoly->tvlist[vertex].pos.x = alpha + alpha * currPoly->tvlist[vertex].pos.x;
+					currPoly->tvlist[vertex].pos.y = beta - beta * currPoly->tvlist[vertex].pos.y;
 				} // end for vertex
 
 			} // end for poly	
@@ -824,9 +731,9 @@ namespace maki{
 		
 		  //相机坐标到屏幕坐标转换（直接法）
 		void CameraToScreen(Camera &cam) {
-			for (int poly = 0; poly < polyPtrs.size(); poly++){
+			for (int poly = 0; poly < polyData.size(); poly++){
 				// acquire current polygon
-				auto currPoly = polyPtrs[poly];
+				auto currPoly = &polyData[poly];
 
 				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
 					(currPoly->state & PloygonStates::kClipped) ||
@@ -838,16 +745,16 @@ namespace maki{
 				float beta = (0.5*cam.viewPortHeight - 0.5);
 
 				// all good, let's transform 
-				for (int vertex = 0; vertex < 3; vertex++){
-					float z = currPoly->tvlist[vertex].z;
+				for (int vertex = 0; vertex < 3; ++vertex){
+					float z = currPoly->tvlist[vertex].pos.z;
 
 					// transform the vertex by the view parameters in the camera
-					currPoly->tvlist[vertex].x = cam.viewDist*currPoly->tvlist[vertex].x / z;
-					currPoly->tvlist[vertex].y = cam.viewDist*currPoly->tvlist[vertex].y*cam.aspectRatio / z;
+					currPoly->tvlist[vertex].pos.x = cam.viewDist*currPoly->tvlist[vertex].pos.x / z;
+					currPoly->tvlist[vertex].pos.y = cam.viewDist*currPoly->tvlist[vertex].pos.y*cam.aspectRatio / z;
 
 					//坐标缩放，反转y轴
-					currPoly->tvlist[vertex].x = alpha + alpha * currPoly->tvlist[vertex].x;
-					currPoly->tvlist[vertex].y = beta - beta * currPoly->tvlist[vertex].y;
+					currPoly->tvlist[vertex].pos.x = alpha + alpha * currPoly->tvlist[vertex].pos.x;
+					currPoly->tvlist[vertex].pos.y = beta - beta * currPoly->tvlist[vertex].pos.y;
 
 				} // end for vertex
 
@@ -858,10 +765,10 @@ namespace maki{
 		//背面消除
 		void RemoveBackfaces(Camera cam) {
 			// 设置多边形背面状态
-			for (int poly = 0; poly < polyPtrs.size(); ++poly)
+			for (int poly = 0; poly < polyData.size(); ++poly)
 			{
 				// acquire current polygon
-				auto currPoly = polyPtrs[poly];
+				auto currPoly = &polyData[poly];
 
 				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
 					(currPoly->state & PloygonStates::kClipped) ||
@@ -870,11 +777,11 @@ namespace maki{
 					continue; // move onto next poly
 
 				//计算多边形面法线，顶点是按顺时针方向排列
-				auto u = currPoly->tvlist[1] - currPoly->tvlist[0];//p0->p1
-				auto v = currPoly->tvlist[2] - currPoly->tvlist[0];//p0->p2
+				auto u = currPoly->tvlist[1].pos - currPoly->tvlist[0].pos;//p0->p1
+				auto v = currPoly->tvlist[2].pos - currPoly->tvlist[0].pos;//p0->p2
 				auto n = u.Cross(v);//u x v
 
-				auto view = cam.pos - currPoly->tvlist[0];//视点指向多边形向量
+				auto view = cam.pos - currPoly->tvlist[0].pos;//视点指向多边形向量
 
 				// 计算点积
 				float dp = n * view;
@@ -890,10 +797,10 @@ namespace maki{
 		
 		//从齐次坐标转为非齐次坐标
 		void ConvertFromHomo4D() {
-			for (int poly = 0; poly < polyPtrs.size(); poly++)
+			for (int poly = 0; poly < polyData.size(); poly++)
 			{
 				// acquire current polygon
-				auto currPoly = polyPtrs[poly];
+				auto currPoly = &polyData[poly];
 
 				if ((currPoly == nullptr) || !(currPoly->state & PloygonStates::kActive) ||
 					(currPoly->state & PloygonStates::kClipped) ||
@@ -904,7 +811,7 @@ namespace maki{
 			 // all good, let's transform 
 				for (int vertex = 0; vertex < 3; vertex++)
 				{
-					currPoly->tvlist[vertex].DivByW();
+					currPoly->tvlist[vertex].pos.DivByW();
 				} // end for vertex
 
 			} // end for poly		
@@ -916,17 +823,17 @@ namespace maki{
 			switch (type){
 			case SortType::kAvgZ:  //  - sorts on average of all vertices
 			{
-				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareAvgZ);
+				std::sort(polyData.begin(), polyData.end(), CompareAvgZ);
 			} break;
 
 			case SortType::kMinZ: // - sorts on closest z vertex of each poly
 			{
-				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareNearZ);
+				std::sort(polyData.begin(), polyData.end(), CompareNearZ);
 			} break;
 
 			case SortType::kMaxZ:  //  - sorts on farthest z vertex of each poly
 			{
-				std::sort(polyPtrs.begin(), polyPtrs.end(), CompareFarZ);
+				std::sort(polyData.begin(), polyData.end(), CompareFarZ);
 			} break;
 
 			default: break;
@@ -937,7 +844,7 @@ namespace maki{
 	};
 	
 	inline std::ostream & operator <<(std::ostream &out, const Object &obj) {
-		std::cout << "id:" << obj.id << std::endl;
+		/*std::cout << "id:" << obj.id << std::endl;
 		std::cout << "name:" << obj.name << std::endl;
 		std::cout << "state:" << std::hex << obj.state << std::endl;
 		std::cout << "attr:" << std::hex << obj.attr << std::endl;
@@ -949,7 +856,7 @@ namespace maki{
 		std::cout << "uz:" << obj.uz.x << " " << obj.uz.y << " " << obj.uz.z << " " << obj.uz.w << std::endl;
 		std::cout << "uy:" << obj.uy.x << " " << obj.uy.y << " " << obj.uy.z << " " << obj.uy.w << std::endl;
 		std::cout << "***********************************************" << std::endl;
-		std::cout << "numVertices:" << obj.numVertices << std::endl;
+		std::cout << "numVertices:" << obj.mesh.vlistLocal.size() << std::endl;
 		for (int i = 0; i < obj.numVertices; ++i) {
 			auto v = obj.vlistLocal[i];
 			std::cout << i << " vlistLocal:" << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
@@ -967,7 +874,7 @@ namespace maki{
 			std::cout << i << " Polygon:" << "state|" << std::hex << v.state << " attr|" << std::hex << v.state << " color|" << v.color;
 			std::cout << " index:" << v.vert[0] << " " << v.vert[1] << " " << v.vert[2] << std::endl;
 		}
-		std::cout << "***********************************************" << std::endl;
+		std::cout << "***********************************************" << std::endl;*/
 
 		return out;
 	}
@@ -977,8 +884,8 @@ namespace maki{
 			return true;
 		}
 		bool flag = true;
-		flag = (a.numPolygons == b.numPolygons) &&
-			(a.numVertices == b.numVertices) &&
+		flag = (a.mesh.vlistLocal.size() == b.mesh.vlistLocal.size()) &&
+			(a.mesh.index.size() == b.mesh.index.size()) &&
 			(a.state == b.state) &&
 			(a.attr == b.attr) &&
 			(fabs(a.avgRadius - b.avgRadius) < EPSILON_E5) &&
@@ -992,8 +899,8 @@ namespace maki{
 			return flag;
 		}
 		else {
-			for (int i = 0; i < a.numVertices; ++i) {
-				if (a.vlistLocal[i] == b.vlistLocal[i] && a.vlistTransl[i] == b.vlistTransl[i]) {
+			for (int i = 0; i < a.mesh.vlistLocal.size(); ++i) {
+				if (a.mesh.vlistLocal[i].pos == b.mesh.vlistLocal[i].pos && a.mesh.vlistTtran[i].pos == b.mesh.vlistTtran[i].pos) {
 					continue;
 				}
 				else {

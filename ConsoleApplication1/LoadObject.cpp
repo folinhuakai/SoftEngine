@@ -108,7 +108,7 @@ namespace maki {
 			obj.ComputeObjectRadius();			
 			obj.worldPos = wordlPos;
 
-			if (scale -1.0 <= EPSILON_E5)
+			if (fabs(scale - 1.0) >= EPSILON_E5)
 			{
 				obj.ScaleMath(scale);
 			}
