@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="catch.hpp" />
+    <ClInclude Include="Color.h" />
     <ClInclude Include="Draw.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LoadObject.h" />
@@ -177,6 +178,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="object_test.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

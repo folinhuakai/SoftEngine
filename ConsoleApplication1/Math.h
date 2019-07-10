@@ -93,8 +93,15 @@ namespace maki {
 			+ thetaF * (CosLook()[thetaInt + 1] - CosLook()[thetaInt]);
 	}
 
-
-
+	inline bool Equalf(float a, float b) {
+		if (fabs(a - b) <= EPSILON_E5) {
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
 
 
 	//¶¨µãÊý

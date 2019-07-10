@@ -3,6 +3,7 @@
 #include <string>
 #include "Math.h"
 #include "Light.h"
+#include "Color.h"
 #include <algorithm>
 #include<vector>
 namespace maki{		
@@ -99,10 +100,10 @@ namespace maki{
 	public:
 		int state{ PloygonStates::kInit };//状态
 		int attr{ 0 };
-		int color{ 0 };
+		Color color;
 
 		Vertex vlist[3];//三角形顶点
-		Vertex tvlist[3];//三角形顶点
+		Vertex tvlist[3];
 		Vector4D faceNormal;//面法线
 		int materialID = -1;//材质id	
 	};
@@ -272,215 +273,6 @@ namespace maki{
 
 			return true;
 		}
-
-		//光照计算
-		/*bool LightInWorld(Camera &cam,
-			const std::vector<Light> lights){
-			//根据光源列表和相机对物体执行光照计算，支持固定着色和恒定着色
-			unsigned int r_base, g_base, b_base,  // 初始颜色
-				r_sum, g_sum, b_sum,   // 全部光照
-				shaded_color;          // 最终颜色
-
-			float dp,     // 点积
-				dist,   // 表面和光源距离
-				i,      // 强度
-				nl,     // 法线长度
-				atten;  // 衰减计算结果
-
-		  // test if the object is culled
-			if (!(state & ObjectState::kActiveS) ||
-				(state & ObjectState::kCull) ||
-				!(state & ObjectState::kVisible))
-				return false;
-
-			// process each poly in mesh
-			for (int poly = 0; poly < numPolygons; poly++){
-				// acquire polygon
-				auto currPoly = plist[poly];
-
-				// 判断多边形有效性
-				if (!(currPoly.state & PloygonStates::kActive) ||
-					(currPoly.state & PloygonStates::kBackface) ||
-					(currPoly.state & PloygonStates::kClipped))
-					continue; // move onto next poly
-
-				 // 获得顶点下标（不是自包含）
-				int vindex_0 = currPoly.vert[0];
-				int vindex_1 = currPoly.vert[1];
-				int vindex_2 = currPoly.vert[2];
-
-				// test the lighting mode of the polygon (use flat for flat, gouraud))
-				if (currPoly.attr & PloygonShadeMode::kFlat || currPoly.attr & PloygonShadeMode::kGouraud){//恒定着色、Gouraud
-					RGB_FROM32BIT(currPoly.color, &r_base, &g_base, &b_base);
-					// initialize color sum
-					r_sum = 0;
-					g_sum = 0;
-					b_sum = 0;				
-
-					// loop thru lights
-					for (int currLight = 0; currLight < lights.size(); ++currLight)
-					{
-						// is this light active
-						if (lights[currLight].state == LightState::kOff)
-							continue;
-
-						// what kind of light are we dealing with
-						if (lights[currLight].attr & LightType::kAmbient){
-							//环境光
-							r_sum += ((lights[currLight].c_ambient.r * r_base) / 256);
-							g_sum += ((lights[currLight].c_ambient.g * g_base) / 256);
-							b_sum += ((lights[currLight].c_ambient.b * b_base) / 256);
-						} // end if
-						else if (lights[currLight].attr & LightType::kInfinite) {
-							//无穷远光源,需计算面法线和光源方向
-							Vector4D u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
-							Vector4D v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2;
-							Vector4D n = u.Cross(v);
-
-							//计算面法线长度,用于法向量归一化
-							nl =n.Length();
-
-							dp = n * lights[currLight].dir;//如果将面法线归一化后，dp即为余弦值
-
-							// only add light if dp > 0
-							if (dp > 0)
-							{
-								i = 128 * dp / nl;//乘128.避免浮点数计算？
-								r_sum += (lights[currLight].c_diffuse.r * r_base * i) / (256 * 128);//加上散射光
-								g_sum += (lights[currLight].c_diffuse.g * g_base * i) / (256 * 128);
-								b_sum += (lights[currLight].c_diffuse.b * b_base * i) / (256 * 128);
-							} // end if
-
-						}
-						else if(lights[currLight].attr & LightType::kPoint){
-							// 点光源,除光强度随距离衰减外，其他与无穷远光源相似
-							//              I0point * Clpoint
-							//  I(d)point = ___________________
-							//              kc +  kl*d + kq*d2        
-
-							// that the vertices are in cw order, u=p0->p1, v=p0->p2, n=uxv
-							Vector4D u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
-							Vector4D v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2;
-							Vector4D n = u.Cross(v);
-
-							//计算面法线长度,用于法向量归一化
-							nl = n.Length();
-							// 顶点到光源向量
-							Vector4D l = lights[currLight].pos - vlistTransl[vindex_0];
-							dist = l.Length();
-
-							// and for the diffuse model
-							dp = n * l;
-
-							// only add light if dp > 0
-							if (dp > 0)
-							{
-								atten = (lights[currLight].kc + lights[currLight].kl*dist + lights[currLight].kq*dist*dist);
-
-								i = 128 * dp / (nl * dist * atten);
-
-								r_sum += (lights[currLight].c_diffuse.r * r_base * i) / (256 * 128);
-								g_sum += (lights[currLight].c_diffuse.g * g_base * i) / (256 * 128);
-								b_sum += (lights[currLight].c_diffuse.b * b_base * i) / (256 * 128);
-							} // end if
-
-						} // end if point
-						else if (lights[currLight].attr & LightType::kSpotLight1){
-							// 简单版聚光灯，与点光源相同
-							Vector4D u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
-							Vector4D v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2;
-							Vector4D n = u.Cross(v);
-
-							//计算面法线长度,用于法向量归一化
-							nl = n.Length();
-							// 顶点到光源向量
-							Vector4D l = lights[currLight].pos - vlistTransl[vindex_0];
-							dist = l.Length();
-
-							// and for the diffuse model
-							dp = n * l;
-
-							// only add light if dp > 0
-							if (dp > 0)
-							{
-								atten = (lights[currLight].kc + lights[currLight].kl*dist + lights[currLight].kq*dist*dist);
-
-								i = 128 * dp / (nl * dist * atten);
-
-								r_sum += (lights[currLight].c_diffuse.r * r_base * i) / (256 * 128);
-								g_sum += (lights[currLight].c_diffuse.g * g_base * i) / (256 * 128);
-								b_sum += (lights[currLight].c_diffuse.b * b_base * i) / (256 * 128);
-							} // end if
-						} // end if spotlight1
-						else if (lights[currLight].attr & LightType::kSpotLight2){
-							//         	     I0spotlight * Clspotlight * MAX( (l . s), 0)^pf                     
-							// I(d)spotlight = __________________________________________      
-							//               		 kc + kl*d + kq*d2        
-							// Where d = |p - s|, and pf = power factor
-							Vector4D u = vlistTransl[vindex_1] - vlistTransl[vindex_0];//p0->p1
-							Vector4D v = vlistTransl[vindex_2] - vlistTransl[vindex_0];//p0->p2;
-							Vector4D n = u.Cross(v);
-
-							nl = n.Length();
-							dp = n * lights[currLight].dir;
-
-							// only add light if dp > 0
-							if (dp > 0){
-								// 顶点到光源向量
-								Vector4D s = vlistTransl[vindex_0]  - lights[currLight].pos;
-								dist = s.Length();
-
-								// 余弦值
-								float dpsl = s * lights[currLight].dir / dist;
-
-								// proceed only if term is positive
-								if (dpsl > 0)
-								{
-									// compute attenuation
-									atten = (lights[currLight].kc + lights[currLight].kl*dist + lights[currLight].kq*dist*dist);
-									float dpsl_exp = dpsl;
-
-									// exponentiate for positive integral powers
-									for (int e_index = 1; e_index < (int)lights[currLight].pf; e_index++)
-										dpsl_exp *= dpsl;
-
-									// now dpsl_exp holds (dpsl)^pf power which is of course (s . l)^pf 
-
-									i = 128 * dp * dpsl_exp / (nl * atten);
-
-									r_sum += (lights[currLight].c_diffuse.r * r_base * i) / (256 * 128);
-									g_sum += (lights[currLight].c_diffuse.g * g_base * i) / (256 * 128);
-									b_sum += (lights[currLight].c_diffuse.b * b_base * i) / (256 * 128);
-
-								} 
-
-							} 
-
-						}									
-
-					} // end for light
-
-				// 确保颜色不会溢出
-					if (r_sum > 255) r_sum = 255;
-					if (g_sum > 255) g_sum = 255;
-					if (b_sum > 255) b_sum = 255;
-
-					// write the color
-					shaded_color = RGBA32BIT(r_sum, g_sum, b_sum,255);
-					currPoly.tColor = shaded_color;
-
-				} // end if
-				else {
-				// 固定着色
-				currPoly.tColor = currPoly.color;
-				} // end if
-
-			} // end for poly
-
-		// return success
-			return true;
-
-		} // end */
 
 		//通过数学公式缩放(仅支持同等比例缩放)
 		

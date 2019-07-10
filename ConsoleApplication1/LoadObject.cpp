@@ -115,6 +115,5 @@ namespace maki {
 		}
 		ifs.close();
 	}
-		
 }
 
