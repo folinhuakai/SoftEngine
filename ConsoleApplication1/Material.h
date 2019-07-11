@@ -118,19 +118,19 @@ namespace maki {
 			id = GlobalId;
 		}
 		//计算光照最终颜色
-		Color CalculateFinalColor(Light &light, const Vector4D& vertex_pos, const Vector4D& vertex_normal, const Vector4D& camera_pos) {
-			if (light->GetType() == LightType::AMBIENT) {
+		Color CalculateFinalColor(LightBase &light, const Vector4D& vertex_pos, const Vector4D& vertex_normal, const Vector4D& camera_pos) {
+			if (light.GetType() == LightType::kAmbient) {
 				//只计算环境光
-				return light->CalculateLightIntensity(vertex_pos, vertex_normal) * color_ * ka_;
+				return light.LightCalculate(vertex_pos, vertex_normal) * color * ka;
 			}
 			else
 			{
-				Color light_color = light->CalculateLightIntensity(vertex_pos, vertex_normal);
-				KZMath::KZVector4D<float> light_vec = light->GetLightVec(vertex_pos);
-				KZMath::KZVector4D<float> reflect_vec = (vertex_normal * (2.0f * light_vec.Vector3Dot(vertex_normal))) - light_vec;
-				KZMath::KZVector4D<float> observe_vec = camera_pos - vertex_pos;
+				Color light_color = light.LightCalculate(vertex_pos, vertex_normal);
+				auto light_vec = light.GetPos() - vertex_pos;
+				auto reflect_vec = (vertex_normal * (2.0f * light_vec* vertex_normal)) - light_vec;
+				auto observe_vec = camera_pos - vertex_pos;
 				//漫反射与镜面反射
-				return light_color * color_ * kd_ * vertex_normal.Vector3Dot(light_vec) + light_color * color_ * ks_ * (float)pow(max(reflect_vec.Vector3Dot(observe_vec), 0.0f), power_);
+				return light_color * color * kd * (vertex_normal*light_vec)+ light_color * color * ks * (float)pow(max(reflect_vec*observe_vec, 0.0f), power);
 			}
 		}
 		//获取贴图像素

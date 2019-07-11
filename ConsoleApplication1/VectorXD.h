@@ -193,6 +193,9 @@ namespace maki {
 		float Length()const {//向量长度
 			return sqrtf(x*x + y * y + z * z);
 		}
+		float LengthDW()const {//向量长度
+			return x*x + y * y + z * z;
+		}
 		void Normalize() {//归一化
 			auto length = Length();
 
@@ -219,6 +222,10 @@ namespace maki {
 	}
 	inline Vector4D operator -(const Vector4D &a, const Vector4D &b) {
 		Vector4D sub(a.x - b.x, a.y - b.y, a.z - b.z, 1);
+		return sub;
+	}
+	inline Vector4D operator -(const Vector4D &a) {
+		Vector4D sub(-a.x, -a.y, -a.z, 1);
 		return sub;
 	}
 
@@ -251,7 +258,11 @@ namespace maki {
 		out << "x = " << vec.x << " y = " << vec.y << " z = " << vec.z << " w = " << vec.w << std::endl;
 		return out;
 	}
-	
+	inline float AngleBetweenVectors(const Vector4D& a, const Vector4D& b) {
+		auto dot = a * b;
+		float cos_num = dot / (a.Length()*b.Length());
+		return RadToDeg(acos(cos_num));
+	}
 
 	/******************四元数***************/
 	class Quat {
