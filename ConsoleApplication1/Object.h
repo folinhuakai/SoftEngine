@@ -312,8 +312,148 @@ namespace maki{
 			avgRadius /= mesh.vlistLocal.size();
 
 		}
-	};
 
+		//预先计算面法线和顶点法线
+		void CalculateNormal(bool need_vertex) {
+			std::vector<int> tmp(mesh.vlistLocal.size(),0);
+			int face_index = 0;
+			for (int i = 0; i < mesh.index.size(); ++face_index, i += 3) {
+				auto vec1 = mesh.vlistLocal[mesh.index[i + 1]].pos - mesh.vlistLocal[mesh.index[i]].pos;
+				auto vec2 = mesh.vlistLocal[mesh.index[i + 2]].pos - mesh.vlistLocal[mesh.index[i + 1]].pos;
+				//面法线
+				mesh.faceNormal[face_index] = vec1.Cross(vec2);
+
+				if (need_vertex) {//根据顶点累加面法线
+					mesh.vlistLocal[mesh.index[i]].normal += mesh.faceNormal[face_index];
+					mesh.vlistLocal[mesh.index[i + 1]].normal += mesh.faceNormal[face_index];
+					mesh.vlistLocal[mesh.index[i + 2]].normal += mesh.faceNormal[face_index];
+					++tmp[mesh.index[i]];
+					++tmp[mesh.index[i + 1]];
+					++tmp[mesh.index[i + 2]];
+				}
+			}
+			if (need_vertex) {
+				for (int i = 0; i < mesh.vlistLocal.size(); ++i) {
+					if (tmp[i] != 0)
+					{
+						mesh.vlistLocal[i].normal /= (float)tmp[i];
+						mesh.vlistLocal[i].normal.Normalize();
+					}
+				}
+			}
+		}
+	};
+	class Cube final :public Object
+	{
+	public:
+		//创建Cube
+		Cube(float _width, float _length, float _height, const Vector4D& _worldPos, const Vector4D& _dir, const float _scale)
+		{
+
+			name = "cube";
+			worldPos = _worldPos;
+			dir = _dir;
+
+			//设置顶点的模型坐标
+			Vertex v1(_width, _length, _height), v2(_width, -_length, _height), v3(-_width, -_length, _height), v4(-_width, _length, _height),
+				v5(_width, _length, -_height), v6(_width, -_length, -_height), v7(-_width, -_length, -_height), v8(-_width, _length, -_height);
+
+
+			//设置顶点的颜色
+			v1.color.SetColor(255, 0, 0);
+			v2.color.SetColor(0, 255, 0);
+			v3.color.SetColor(0, 0, 255);
+			v4.color.SetColor(255, 255, 0);
+			v5.color.SetColor(255, 0, 255);
+			v6.color.SetColor(0, 255, 255);
+			v7.color.SetColor(255, 255, 255);
+			v8.color.SetColor(128, 128, 128);
+
+			//设置顶点的uv坐标
+			v1.uv.x = 1.0f;
+			v1.uv.y = 0.0f;
+			v2.uv.x = 1.0f;
+			v2.uv.y = 1.0f;
+			v3.uv.x = 0.0f;
+			v3.uv.y = 1.0f;
+			v4.uv.x = 0.0f;
+			v4.uv.y = 0.0f;
+
+			//将顶点加入列表
+			mesh.vlistLocal.push_back(std::move(v1));
+			mesh.vlistLocal.push_back(std::move(v2));
+			mesh.vlistLocal.push_back(std::move(v3));
+			mesh.vlistLocal.push_back(std::move(v4));
+			mesh.vlistLocal.push_back(std::move(v5));
+			mesh.vlistLocal.push_back(std::move(v6));
+			mesh.vlistLocal.push_back(std::move(v7));
+			mesh.vlistLocal.push_back(std::move(v8));
+
+
+			//设置顶点索引
+			//front face
+			mesh.index.push_back(0);
+			mesh.index.push_back(2);
+			mesh.index.push_back(1);
+
+			mesh.index.push_back(0);
+			mesh.index.push_back(3);
+			mesh.index.push_back(2);
+
+			//back face
+			mesh.index.push_back(7);
+			mesh.index.push_back(5);
+			mesh.index.push_back(6);
+
+			mesh.index.push_back(7);
+			mesh.index.push_back(4);
+			mesh.index.push_back(5);
+
+			//left face
+			mesh.index.push_back(3);
+			mesh.index.push_back(6);
+			mesh.index.push_back(2);
+
+			mesh.index.push_back(3);
+			mesh.index.push_back(7);
+			mesh.index.push_back(6);
+
+			//right face
+			mesh.index.push_back(4);
+			mesh.index.push_back(1);
+			mesh.index.push_back(5);
+
+			mesh.index.push_back(4);
+			mesh.index.push_back(0);
+			mesh.index.push_back(1);
+
+			//top face
+			mesh.index.push_back(4);
+			mesh.index.push_back(3);
+			mesh.index.push_back(0);
+
+			mesh.index.push_back(4);
+			mesh.index.push_back(7);
+			mesh.index.push_back(3);
+
+			//bottom face
+			mesh.index.push_back(1);
+			mesh.index.push_back(6);
+			mesh.index.push_back(5);
+
+			mesh.index.push_back(1);
+			mesh.index.push_back(2);
+			mesh.index.push_back(6);
+
+			ComputeObjectRadius();
+			CalculateNormal(true);
+
+			if (!Equalf(_scale,1.0))
+			{
+				ScaleMath(_scale);
+			}
+		}
+	};
 
 	/************************主多边形列表*************************************/
 	// 根据z最小值排序
@@ -608,6 +748,11 @@ namespace maki{
 
 			} // end for poly		
 
+		}
+
+		//三角形裁剪
+		void PolyCulling(Camera &cam) {
+		
 		}
 
 		//根据z值对多边形排序

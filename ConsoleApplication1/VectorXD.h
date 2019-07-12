@@ -168,7 +168,8 @@ namespace maki {
 	class Vector4D {
 	public:
 		Vector4D() :x(0), y(0), z(0), w(1) {}
-		Vector4D(float x, float y, float z, float w) :x(x), y(y), z(z), w(w) {}
+		Vector4D(float _x, float _y, float _z) :x(_x), y(_y), z(_z), w(1) {}
+		Vector4D(float _x, float _y, float _z, float _w) :x(_x), y(_y), z(_z), w(_w) {}
 		Vector4D(const Vector4D& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
 		void Vector4DZero() {
 			x = 0.0f;
@@ -211,6 +212,20 @@ namespace maki {
 			x /= w;
 			y /= w;
 			z /= w;
+			w = 1;
+		}
+
+		void operator +=(const Vector4D &a) {
+			x += a.x;
+			y += a.y;
+			z += a.z;
+			w = 1;
+		}
+		
+		void operator /=(const float &k) {
+			x /= k;
+			y /= k;
+			z /= k;
 			w = 1;
 		}
 		float x, y, z, w;

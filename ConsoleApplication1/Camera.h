@@ -69,21 +69,25 @@ namespace maki {
 		Matrix<float, 4, 4> mscr;//透视坐标到屏幕坐标变换矩阵
 
 		//初始化相机 @parame fov：视野，单位°
-		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D &camdir, const Point4D &camTarget,
-			float nearClipZ, float farClipZ, float fov, float viewportWidth, float viewportHeight) {
+		void InitCamera(CameraType camAttr, const Point4D &camPos, const Vector4D *camdir, const Point4D *camTarget,
+			float _nearClipZ, float _farClipZ, float _fov, float _viewportWidth, float _viewportHeight) {
 			attr = camAttr;
 			pos = camPos;
-			dir = camdir;
+			if (camdir != nullptr) {
+				dir = *camdir;
+			}
+			if (camTarget != nullptr) {
+				target = *camTarget;
+			}
+			
+			nearClipZ = _nearClipZ;
+			farClipZ = _farClipZ;
 
-			target = camTarget;
-			nearClipZ = nearClipZ;
-			farClipZ = farClipZ;
+			viewPortWidth = _viewportWidth;   // 视口大小
+			viewPortHeight = _viewportHeight;
 
-			viewPortWidth = viewportWidth;   // 视口大小
-			viewPortHeight = viewportHeight;
-
-			viewPortCenterX = (viewPortWidth - 1) / 2; // center of viewport
-			viewPortCenterY = (viewPortHeight - 1) / 2;
+			viewPortCenterX = (_viewportWidth - 1) / 2; // center of viewport
+			viewPortCenterY = (_viewportHeight - 1) / 2;
 
 			aspectRatio = viewPortWidth / viewPortHeight;
 
@@ -99,7 +103,7 @@ namespace maki {
 			mper = mat;
 			mscr = mat;
 
-			fov = fov;
+			fov = _fov;
 
 			//视平面大小为 2 x (2/ar)
 			viewPlaneWidth = 2.0;

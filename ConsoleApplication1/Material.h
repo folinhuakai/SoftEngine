@@ -104,10 +104,25 @@ namespace maki {
 		//获取指定位置单通道的颜色值,顶点索引
 		void GetSingleChannelColor(int idx, int& value) const { value = (int)pixel[idx].r; }
 
+		//获取贴图颜色(根据比例获得)
+		bool GetTextureColor(float s, float t,Color& color) {
+			if (width == 0 || height == 0|| s>1.0 || t>1.0) {
+				return false;
+			}			
+			else
+			{
+				auto x = static_cast<int>(s * (width - 1));
+				auto y = static_cast<int>(t * (height - 1));
+				GetPixel(x, y, color);
+				return true; 
+			}
+		}
+
 	private:
 		int width, height;  // size of bitmap
 		Color* pixel;
 	};
+	/**********************************材质************************************/
 	class Material {
 	public:
 		//构造函数
@@ -127,35 +142,21 @@ namespace maki {
 			{
 				Color light_color = light.LightCalculate(vertex_pos, vertex_normal);
 				auto light_vec = light.GetPos() - vertex_pos;
-				auto reflect_vec = (vertex_normal * (2.0f * light_vec* vertex_normal)) - light_vec;
+				auto reflect_vec = (vertex_normal * (2.0f * light_vec* vertex_normal)) - light_vec;//反射向量
 				auto observe_vec = camera_pos - vertex_pos;
 				//漫反射与镜面反射
 				return light_color * color * kd * (vertex_normal*light_vec)+ light_color * color * ks * (float)pow(max(reflect_vec*observe_vec, 0.0f), power);
 			}
 		}
 		//获取贴图像素
-		void GetTexturePixel(float s, float t, Color& color) {
-			int x, y;
-			int height = texture.GetHeight();
-			int width = texture.GetWidth();
-			if (width <= 0 || height <= 0) {
-				return;
-			}
-			else
-			{
-				x = static_cast<int>(s * (width - 1));
-				y = static_cast<int>(t * (height - 1));
-				texture.GetPixel(x, y, color);
-			}
+		bool GetTexturePixel(float s, float t, Color& color) {
+			return texture.GetTextureColor(s,t,color);
 		}
 
-		int state;           // 材质状态
 		int id;              
 		std::string name;    // 名称
 		Color color;            // 颜色
 		float ka, kd, ks, power; // 对环境光、散射光、镜面反射光的反射系数、镜面反射指数
-
-		int ra, rd, rs;       // 预先计算得到的颜色与反射系数积
 
 		std::string texturePath;  // 纹理位置
 		BitMap texture;    // actual texture map (if any)
