@@ -34,7 +34,7 @@ namespace maki {
 		Vector4D GetPos() {
 			return pos;
 		}
-		LightState state{ LightState::kOff };
+		LightState state{ LightState::kOn };
 	protected:
 		LightType type;
 		Color color;

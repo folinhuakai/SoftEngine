@@ -158,6 +158,7 @@ namespace maki {
 		Color color;            // 颜色
 		float ka, kd, ks, power; // 对环境光、散射光、镜面反射光的反射系数、镜面反射指数
 
+		bool hasTexture = false;
 		std::string texturePath;  // 纹理位置
 		BitMap texture;    // actual texture map (if any)
 

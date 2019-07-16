@@ -11446,9 +11446,9 @@ namespace Catch {
 #include <cstdint>
 
 namespace {
-    const uint32_t byte_2_lead = 0xC0;
-    const uint32_t byte_3_lead = 0xE0;
-    const uint32_t byte_4_lead = 0xF0;
+    const int byte_2_lead = 0xC0;
+    const int byte_3_lead = 0xE0;
+    const int byte_4_lead = 0xF0;
 }
 
 namespace Catch {
@@ -12769,7 +12769,7 @@ namespace {
         CATCH_INTERNAL_ERROR("Invalid multibyte utf-8 start byte encountered");
     }
 
-    uint32_t headerValue(unsigned char c) {
+    int headerValue(unsigned char c) {
         if ((c & 0xE0) == 0xC0) {
             return c & 0x1F;
         }
@@ -12860,7 +12860,7 @@ namespace {
                 // The next encBytes bytes must together be a valid utf-8
                 // This means: bitpattern 10XX XXXX and the extracted value is sane (ish)
                 bool valid = true;
-                uint32_t value = headerValue(c);
+                int value = headerValue(c);
                 for (std::size_t n = 1; n < encBytes; ++n) {
                     uchar nc = m_str[idx + n];
                     valid &= ((nc & 0xC0) == 0x80);

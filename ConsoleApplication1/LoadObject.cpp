@@ -67,7 +67,7 @@ namespace maki {
 				}
 				else if (str[0] == 'f')
 				{
-					for (uint32_t k = str.size() - 1; k > 0; --k)
+					for (int k = str.size() - 1; k > 0; --k)
 					{
 						if (str[k] == '/')
 						{
@@ -78,7 +78,7 @@ namespace maki {
 					ss.str("");
 					ss << str;
 					ss >> head;
-					for (uint32_t i = 0; i < 3; ++i)
+					for (int i = 0; i < 3; ++i)
 					{
 						if (has_pos)
 						{
@@ -107,7 +107,7 @@ namespace maki {
 
 			obj.ComputeObjectRadius();			
 			obj.worldPos = wordlPos;
-
+			obj.matIdList.resize(obj.mesh.faceNormal.size(), -1);
 			if (fabs(scale - 1.0) >= EPSILON_E5)
 			{
 				obj.ScaleMath(scale);
